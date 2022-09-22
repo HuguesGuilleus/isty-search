@@ -6,14 +6,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+	"net/url"
+	"sort"
 	"testing"
 )
 
-//go:embed example-simple.html
-var exampleSimpleHtml []byte
+var (
+	//go:embed example-simple.html
+	exampleSimpleHtml []byte
+	//go:embed example-url.html
+	exampleURLHtml []byte
+)
 
 func TestParse(t *testing.T) {
-	root, _, err := Parse(exampleSimpleHtml)
+	root, err := Parse(exampleSimpleHtml)
 	assert.NoError(t, err)
 	receivedLine := make([]string, 0)
 	root.print("", &receivedLine)
@@ -107,4 +113,31 @@ func (node *Node) print(tab string, lines *[]string) {
 	for _, child := range node.Children {
 		child.print(tab+"=", lines)
 	}
+}
+
+func TestGetURL(t *testing.T) {
+	mustParse := func(s string) *url.URL {
+		u, err := url.Parse(s)
+		if err != nil {
+			panic(err)
+		}
+		return u
+	}
+
+	root, err := Parse(exampleURLHtml)
+	assert.NoError(t, err)
+
+	receivedURL := root.GetURL(mustParse("https://example.com/dir/subdir/file.html"))
+	sort.Slice(receivedURL, func(i, j int) bool {
+		return receivedURL[i].String() < receivedURL[j].String()
+	})
+
+	assert.Equal(t, []*url.URL{
+		mustParse("https://example.com/"),
+		mustParse("https://example.com/dir/"),
+		mustParse("https://example.com/dir/subdir/file.html"),
+		mustParse("https://example.com/dir/subdir/file.html?a=1&b=2"),
+		mustParse("https://example.com/swag"),
+		mustParse("https://github.com/"),
+	}, receivedURL)
 }
