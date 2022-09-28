@@ -11,6 +11,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/html"
 	"io"
 	"net/url"
 	"testing"
@@ -97,6 +98,42 @@ func TestSaver(t *testing.T) {
 		t.Log()
 	}
 }
+
+func BenchmarkDecode(b *testing.B) {
+	for _, compressor := range compressorSlice {
+		data := testEncoder(nil, fakeEncoder, compressor.compressor)
+
+		b.Run("html+"+compressor.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				buff := &bytes.Buffer{}
+				if compressor.decompressor != nil {
+					decompress, _ := compressor.decompressor(bytes.NewReader(data))
+					buff.ReadFrom(decompress)
+					decompress.Close()
+				} else {
+					buff = bytes.NewBuffer(data)
+				}
+				html.Parse(buff)
+			}
+		})
+	}
+
+	for _, encoder := range encoderSlice {
+		for _, compressor := range compressorSlice {
+			name := encoder.name + "+" + compressor.name
+			data := testEncoder(testPageSource, encoder.encode, compressor.compressor)
+
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					testDecoder[crawler.Page](data, encoder.decode, compressor.decompressor)
+				}
+			})
+		}
+	}
+}
+
+// Return always testPageSourceBytes, nil
+func fakeEncoder(_ any) ([]byte, error) { return testPageSourceBytes, nil }
 
 func testEncoder(v any, encode func(any) ([]byte, error), compressor func(io.Writer) Compressor) []byte {
 	data, err := encode(v)
