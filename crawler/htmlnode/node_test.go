@@ -2,7 +2,6 @@ package htmlnode
 
 import (
 	_ "embed"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -21,11 +20,9 @@ var (
 func TestParse(t *testing.T) {
 	root, err := Parse(exampleSimpleHtml)
 	assert.NoError(t, err)
-	receivedLine := make([]string, 0)
-	root.print("", &receivedLine)
+	receivedLine := root.PrintLines()
 
-	expectedLine := make([]string, 0)
-	(&Node{
+	expectedLine := (&Node{
 		TagName:    atom.Html,
 		Attributes: []html.Attribute{{"", "lang", "en"}},
 		Children: []Node{
@@ -81,38 +78,9 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
-	}).print("", &expectedLine)
+	}).PrintLines()
 
 	assert.EqualValues(t, expectedLine, receivedLine)
-}
-
-// Append recursively in lines each node description.
-func (node *Node) print(tab string, lines *[]string) {
-	s := tab
-	if len(node.Text) > 0 {
-		s += fmt.Sprintf("'%s'", node.Text)
-	} else {
-		if node.Namespace != "" {
-			s += fmt.Sprintf("<%s:%s>", node.Namespace, node.TagName)
-		} else {
-			s += fmt.Sprintf("<%s>", node.TagName)
-		}
-		for _, attr := range node.Attributes {
-			s += " "
-			if attr.Namespace != "" {
-				s += attr.Namespace + ":"
-			}
-			s += attr.Key
-			if attr.Val != "" {
-				s += "=" + attr.Val
-			}
-		}
-	}
-	*lines = append(*lines, s)
-
-	for _, child := range node.Children {
-		child.print(tab+"=", lines)
-	}
 }
 
 func TestGetURL(t *testing.T) {

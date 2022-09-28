@@ -2,6 +2,7 @@ package htmlnode
 
 import (
 	"bytes"
+	"fmt"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"net/url"
@@ -119,5 +120,40 @@ func (node Node) Visit(f func(Node)) {
 		n := toVisit[len(toVisit)-1]
 		f(n)
 		toVisit = append(toVisit[:len(toVisit)-1], n.Children...)
+	}
+}
+
+func (node *Node) PrintLines() []string {
+	lines := make([]string, 0)
+	node.printLines("", &lines)
+	return lines
+}
+
+// Append recursively in lines each node description.
+func (node *Node) printLines(tab string, lines *[]string) {
+	s := tab
+	if len(node.Text) > 0 {
+		s += fmt.Sprintf("'%s'", node.Text)
+	} else {
+		if node.Namespace != "" {
+			s += fmt.Sprintf("<%s:%s>", node.Namespace, node.TagName)
+		} else {
+			s += fmt.Sprintf("<%s>", node.TagName)
+		}
+		for _, attr := range node.Attributes {
+			s += " "
+			if attr.Namespace != "" {
+				s += attr.Namespace + ":"
+			}
+			s += attr.Key
+			if attr.Val != "" {
+				s += "=" + attr.Val
+			}
+		}
+	}
+	*lines = append(*lines, s)
+
+	for _, child := range node.Children {
+		child.printLines(tab+"=", lines)
 	}
 }
