@@ -32,23 +32,17 @@ func TestParse(t *testing.T) {
 					Node{Text: "\n\t"},
 					Node{
 						TagName: atom.Title,
-						Children: []Node{
-							Node{Text: "Hello World"},
-						},
+						Text:    "Hello World",
 					},
 					Node{Text: "\n\t"},
 					Node{
 						TagName: atom.Script,
-						Children: []Node{
-							Node{Text: "\n\t\tconsole.log('Hello');\n\n\t"},
-						},
+						Text:    "\n\t\tconsole.log('Hello');\n\n\t",
 					},
 					Node{Text: "\n\t"},
 					Node{
 						TagName: atom.Style,
-						Children: []Node{
-							Node{Text: "\n\t\t.yolo {\n\t\t\tcolor: red;\n\t\t}\n\n\t"},
-						},
+						Text:    "\n\t\t.yolo {\n\t\t\tcolor: red;\n\t\t}\n\n\t",
 					},
 					Node{Text: "\n"},
 				},
@@ -60,9 +54,7 @@ func TestParse(t *testing.T) {
 					Node{Text: "\n\t"},
 					Node{
 						TagName: atom.H1,
-						Children: []Node{
-							Node{Text: "My First Heading"},
-						},
+						Text:    "My First Heading",
 					},
 					Node{Text: "\n\t"},
 					Node{
@@ -70,9 +62,7 @@ func TestParse(t *testing.T) {
 						Attributes: []html.Attribute{
 							{"", "class", "yolo"},
 						},
-						Children: []Node{
-							Node{Text: "My first paragraph."},
-						},
+						Text: "My first paragraph.",
 					},
 					Node{Text: "\n\n\n\n"},
 				},

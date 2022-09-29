@@ -8,18 +8,19 @@ import (
 	"net/url"
 )
 
-// One node, it can contain text or is a container node with a tag,
-// and maybe attributes and children.
+// One html node, it can contain text or children. In case of pure text node,
+// it do not contain Namespace, TagName and Attributes.
 type Node struct {
-	// Unescaped text.
-	Text string
-
 	Namespace  string
 	TagName    atom.Atom
 	Attributes []html.Attribute
+
 	// All children. We use a slice insteed of a pointeur for parent,
 	// first child... because of recursive data structure.
 	Children []Node
+
+	// Unescaped text.
+	Text string
 }
 
 // From html content, get Node.
@@ -68,10 +69,15 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 			Attributes: srcNode.Attr,
 		}
 
-		if srcNode.FirstChild != nil {
-			newNode.Children = make([]Node, 0)
-			for child := srcNode.FirstChild; child != nil; child = child.NextSibling {
-				convertNode(child, &newNode.Children)
+		if first := srcNode.FirstChild; first != nil {
+			if first == srcNode.LastChild && first.Type == html.TextNode {
+				// only one text node
+				newNode.Text = srcNode.FirstChild.Data
+			} else {
+				newNode.Children = make([]Node, 0)
+				for child := srcNode.FirstChild; child != nil; child = child.NextSibling {
+					convertNode(child, &newNode.Children)
+				}
 			}
 		}
 
@@ -132,9 +138,8 @@ func (node *Node) PrintLines() []string {
 // Append recursively in lines each node description.
 func (node *Node) printLines(tab string, lines *[]string) {
 	s := tab
-	if len(node.Text) > 0 {
-		s += fmt.Sprintf("'%s'", node.Text)
-	} else {
+
+	if node.TagName != 0 {
 		if node.Namespace != "" {
 			s += fmt.Sprintf("<%s:%s>", node.Namespace, node.TagName)
 		} else {
@@ -151,6 +156,11 @@ func (node *Node) printLines(tab string, lines *[]string) {
 			}
 		}
 	}
+
+	if len(node.Text) > 0 {
+		s += fmt.Sprintf(" '%s'", node.Text)
+	}
+
 	*lines = append(*lines, s)
 
 	for _, child := range node.Children {
