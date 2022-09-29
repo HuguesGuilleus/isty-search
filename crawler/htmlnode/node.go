@@ -6,14 +6,16 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"net/url"
+	"sort"
 )
 
 // One html node, it can contain text or children. In case of pure text node,
 // it do not contain Namespace, TagName and Attributes.
 type Node struct {
-	Namespace  string
-	TagName    atom.Atom
-	Attributes []html.Attribute
+	Namespace string
+	TagName   atom.Atom
+
+	Attributes map[string]string
 
 	// All children. We use a slice insteed of a pointeur for parent,
 	// first child... because of recursive data structure.
@@ -66,7 +68,7 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 		newNode := Node{
 			Namespace:  srcNode.Namespace,
 			TagName:    srcNode.DataAtom,
-			Attributes: srcNode.Attr,
+			Attributes: convertAttributes(srcNode.Attr),
 		}
 
 		if first := srcNode.FirstChild; first != nil {
@@ -85,16 +87,32 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 	}
 }
 
+func convertAttributes(srcAttributes []html.Attribute) map[string]string {
+	if len(srcAttributes) == 0 {
+		return nil
+	}
+
+	m := make(map[string]string, len(srcAttributes))
+
+	for _, attr := range srcAttributes {
+		if attr.Namespace != "" {
+			m[attr.Namespace+":"+attr.Key] = attr.Val
+		} else {
+			m[attr.Key] = attr.Val
+		}
+	}
+
+	return m
+}
+
 // From this document, get all url from anchor element.
 // Filter url with protocol different of http or https.
 func (node Node) GetURL(origin *url.URL) []*url.URL {
 	foundedURL := make(map[string]bool, 0)
 	node.Visit(func(node Node) {
 		if node.TagName == atom.A {
-			for _, attr := range node.Attributes {
-				if attr.Namespace == "" && attr.Key == "href" {
-					foundedURL[attr.Val] = true
-				}
+			if href := node.Attributes["href"]; href != "" {
+				foundedURL[href] = true
 			}
 		}
 	})
@@ -145,16 +163,18 @@ func (node *Node) printLines(tab string, lines *[]string) {
 		} else {
 			fmt.Fprintf(buff, "<%s>", node.TagName)
 		}
-		for _, attr := range node.Attributes {
+
+		attributeNames := make([]string, 0, len(node.Attributes))
+		for name := range node.Attributes {
+			attributeNames = append(attributeNames, name)
+		}
+		sort.Strings(attributeNames)
+		for _, name := range attributeNames {
 			buff.WriteByte(' ')
-			if attr.Namespace != "" {
-				buff.WriteString(attr.Namespace)
-				buff.WriteByte(':')
-			}
-			buff.WriteString(attr.Key)
-			if attr.Val != "" {
+			buff.WriteString(name)
+			if value := node.Attributes[name]; value != "" {
 				buff.WriteByte('=')
-				buff.WriteString(attr.Val)
+				buff.WriteString(value)
 			}
 		}
 	}

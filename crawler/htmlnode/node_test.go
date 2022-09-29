@@ -3,7 +3,6 @@ package htmlnode
 import (
 	_ "embed"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"net/url"
 	"sort"
@@ -24,7 +23,7 @@ func TestParse(t *testing.T) {
 
 	expectedLine := (&Node{
 		TagName:    atom.Html,
-		Attributes: []html.Attribute{{"", "lang", "en"}},
+		Attributes: map[string]string{"lang": "en"},
 		Children: []Node{
 			Node{
 				TagName: atom.Head,
@@ -58,11 +57,15 @@ func TestParse(t *testing.T) {
 					},
 					Node{Text: "\n\t"},
 					Node{
-						TagName: atom.P,
-						Attributes: []html.Attribute{
-							{"", "class", "yolo"},
-						},
-						Text: "My first paragraph.",
+						TagName:    atom.P,
+						Attributes: map[string]string{"class": "yolo"},
+						Text:       "My first paragraph.",
+					},
+					Node{Text: "\n\t"},
+					Node{
+						TagName:    atom.Div,
+						Attributes: map[string]string{"hidden": ""},
+						Text:       "Hidden text!",
 					},
 					Node{Text: "\n\n\n\n"},
 				},
