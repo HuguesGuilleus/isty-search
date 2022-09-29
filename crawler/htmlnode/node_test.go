@@ -53,13 +53,14 @@ func TestParse(t *testing.T) {
 					Node{Text: "\n\t"},
 					Node{
 						TagName: atom.H1,
+						Id:      "h1",
 						Text:    "My First Heading",
 					},
 					Node{Text: "\n\t"},
 					Node{
-						TagName:    atom.P,
-						Attributes: map[string]string{"class": "yolo"},
-						Text:       "My first paragraph.",
+						TagName: atom.P,
+						Classes: []string{"yolo", "swag"},
+						Text:    "My first paragraph.",
 					},
 					Node{Text: "\n\t"},
 					Node{

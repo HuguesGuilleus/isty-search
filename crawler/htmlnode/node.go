@@ -7,6 +7,8 @@ import (
 	"golang.org/x/net/html/atom"
 	"net/url"
 	"sort"
+	"strings"
+	"unicode"
 )
 
 // One html node, it can contain text or children. In case of pure text node,
@@ -15,6 +17,8 @@ type Node struct {
 	Namespace string
 	TagName   atom.Atom
 
+	Id         string
+	Classes    []string
 	Attributes map[string]string
 
 	// All children. We use a slice insteed of a pointeur for parent,
@@ -66,10 +70,10 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 		*children = append(*children, Node{Text: srcNode.Data})
 	case html.ElementNode:
 		newNode := Node{
-			Namespace:  srcNode.Namespace,
-			TagName:    srcNode.DataAtom,
-			Attributes: convertAttributes(srcNode.Attr),
+			Namespace: srcNode.Namespace,
+			TagName:   srcNode.DataAtom,
 		}
+		newNode.addAttributes(srcNode.Attr)
 
 		if first := srcNode.FirstChild; first != nil {
 			if first == srcNode.LastChild && first.Type == html.TextNode {
@@ -87,22 +91,26 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 	}
 }
 
-func convertAttributes(srcAttributes []html.Attribute) map[string]string {
+func (node *Node) addAttributes(srcAttributes []html.Attribute) {
 	if len(srcAttributes) == 0 {
-		return nil
+		return
 	}
 
-	m := make(map[string]string, len(srcAttributes))
-
+	node.Attributes = make(map[string]string, len(srcAttributes))
 	for _, attr := range srcAttributes {
-		if attr.Namespace != "" {
-			m[attr.Namespace+":"+attr.Key] = attr.Val
+		if attr.Namespace == "" {
+			switch attr.Key {
+			case "class":
+				node.Classes = strings.FieldsFunc(attr.Val, unicode.IsSpace)
+			case "id":
+				node.Id = attr.Val
+			default:
+				node.Attributes[attr.Key] = attr.Val
+			}
 		} else {
-			m[attr.Key] = attr.Val
+			node.Attributes[attr.Namespace+":"+attr.Key] = attr.Val
 		}
 	}
-
-	return m
 }
 
 // From this document, get all url from anchor element.
@@ -162,6 +170,16 @@ func (node *Node) printLines(tab string, lines *[]string) {
 			fmt.Fprintf(buff, "<%s:%s>", node.Namespace, node.TagName)
 		} else {
 			fmt.Fprintf(buff, "<%s>", node.TagName)
+		}
+
+		if id := node.Id; id != "" {
+			buff.WriteString(" #")
+			buff.WriteString(id)
+		}
+
+		for _, class := range node.Classes {
+			buff.WriteString(" .")
+			buff.WriteString(class)
 		}
 
 		attributeNames := make([]string, 0, len(node.Attributes))
