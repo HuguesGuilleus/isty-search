@@ -137,31 +137,33 @@ func (node *Node) PrintLines() []string {
 
 // Append recursively in lines each node description.
 func (node *Node) printLines(tab string, lines *[]string) {
-	s := tab
+	buff := bytes.NewBufferString(tab)
 
 	if node.TagName != 0 {
 		if node.Namespace != "" {
-			s += fmt.Sprintf("<%s:%s>", node.Namespace, node.TagName)
+			fmt.Fprintf(buff, "<%s:%s>", node.Namespace, node.TagName)
 		} else {
-			s += fmt.Sprintf("<%s>", node.TagName)
+			fmt.Fprintf(buff, "<%s>", node.TagName)
 		}
 		for _, attr := range node.Attributes {
-			s += " "
+			buff.WriteByte(' ')
 			if attr.Namespace != "" {
-				s += attr.Namespace + ":"
+				buff.WriteString(attr.Namespace)
+				buff.WriteByte(':')
 			}
-			s += attr.Key
+			buff.WriteString(attr.Key)
 			if attr.Val != "" {
-				s += "=" + attr.Val
+				buff.WriteByte('=')
+				buff.WriteString(attr.Val)
 			}
 		}
 	}
 
 	if len(node.Text) > 0 {
-		s += fmt.Sprintf(" '%s'", node.Text)
+		fmt.Fprintf(buff, " '%s'", node.Text)
 	}
 
-	*lines = append(*lines, s)
+	*lines = append(*lines, buff.String())
 
 	for _, child := range node.Children {
 		child.printLines(tab+"=", lines)
