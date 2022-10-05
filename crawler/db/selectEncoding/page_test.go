@@ -7,7 +7,6 @@ import (
 	_ "embed"
 	"encoding/gob"
 	"encoding/json"
-	"encoding/xml"
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/stretchr/testify/assert"
@@ -56,7 +55,6 @@ var (
 			return gob.NewDecoder(bytes.NewReader(data)).Decode(v)
 		}},
 		{"json", json.Marshal, json.Unmarshal},
-		{"xml", xml.Marshal, xml.Unmarshal},
 	}
 
 	compressorSlice = []struct {
