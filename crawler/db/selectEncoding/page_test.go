@@ -17,11 +17,6 @@ import (
 	"time"
 )
 
-type Compressor interface {
-	io.Writer
-	Flush() error
-}
-
 var (
 	//go:embed Nicéphore_II_Phocas.html
 	testPageSourceBytes []byte
@@ -59,15 +54,15 @@ var (
 
 	compressorSlice = []struct {
 		name         string
-		compressor   func(io.Writer) Compressor
+		compressor   func(io.Writer) io.WriteCloser
 		decompressor func(io.Reader) (io.ReadCloser, error)
 	}{
 		{"none", nil, nil},
 		{"gzip",
-			func(w io.Writer) Compressor { return gzip.NewWriter(w) },
+			func(w io.Writer) io.WriteCloser { return gzip.NewWriter(w) },
 			func(r io.Reader) (io.ReadCloser, error) { return gzip.NewReader(r) }},
 		{"zlib",
-			func(w io.Writer) Compressor { return zlib.NewWriter(w) },
+			func(w io.Writer) io.WriteCloser { return zlib.NewWriter(w) },
 			zlib.NewReader},
 	}
 )
@@ -133,7 +128,7 @@ func BenchmarkDecode(b *testing.B) {
 // Return always testPageSourceBytes, nil
 func fakeEncoder(_ any) ([]byte, error) { return testPageSourceBytes, nil }
 
-func testEncoder(v any, encode func(any) ([]byte, error), compressor func(io.Writer) Compressor) []byte {
+func testEncoder(v any, encode func(any) ([]byte, error), compressor func(io.Writer) io.WriteCloser) []byte {
 	data, err := encode(v)
 	if err != nil {
 		panic(err)
@@ -151,7 +146,7 @@ func testEncoder(v any, encode func(any) ([]byte, error), compressor func(io.Wri
 	} else if int(n) != len(data) {
 		panic("no write all")
 	}
-	if err := c.Flush(); err != nil {
+	if err := c.Close(); err != nil {
 		panic(err)
 	}
 	return buff.Bytes()
@@ -163,8 +158,12 @@ func testDecoder[T any](data []byte, decode func([]byte, any) error, decompresso
 			panic(err)
 		}
 		buff := bytes.Buffer{}
-		buff.ReadFrom(decompress)
-		decompress.Close()
+		if _, err = buff.ReadFrom(decompress); err != nil {
+			panic(err)
+		}
+		if err := decompress.Close(); err != nil {
+			panic(err)
+		}
 		data = buff.Bytes()
 	}
 
