@@ -14,6 +14,11 @@ func NewURLKey(u *url.URL) Key {
 	return Key(sha256.Sum256([]byte(u.String())))
 }
 
+// Retunrn the value in hexadecimal
+func (key Key) String() string {
+	return hex.EncodeToString(key[:])
+}
+
 // From cleaned base path of the db, return "base/xx/xx/xx/xx...xx".
 func (key Key) path(base string) string {
 	l := len(base)
