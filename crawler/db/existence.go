@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"sync"
 )
@@ -50,6 +51,22 @@ func (db *Existence) Exist(key Key) bool {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
 	return db.keys[key]
+}
+
+// Filter remove known url from the list.
+func (db *Existence) Filter(list []*url.URL) []*url.URL {
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
+
+	filtered := make([]*url.URL, 0, len(list))
+	for _, u := range list {
+		if db.keys[NewURLKey(u)] {
+			continue
+		}
+		filtered = append(filtered, u)
+	}
+
+	return filtered
 }
 
 // Close the internal file and the map of keys. Must no use the DB after
