@@ -2,7 +2,9 @@ package htmlnode
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"net/url"
@@ -10,6 +12,8 @@ import (
 	"strings"
 	"unicode"
 )
+
+const mimeLdJSON = "application/ld+json"
 
 // One html node, it can contain text or children. In case of pure text node,
 // it do not contain Namespace, TagName and Attributes.
@@ -69,6 +73,10 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 	case html.TextNode:
 		*children = append(*children, Node{Text: srcNode.Data})
 	case html.ElementNode:
+		if ignoreElementNode(srcNode) {
+			return
+		}
+
 		newNode := Node{
 			Namespace: srcNode.Namespace,
 			TagName:   srcNode.DataAtom,
@@ -87,8 +95,42 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 			}
 		}
 
+		if newNode.Namespace == "" &&
+			newNode.TagName == atom.Script &&
+			newNode.Attributes["type"] == mimeLdJSON {
+			buff := recycler.Get()
+			defer recycler.Recycle(buff)
+
+			if err := json.Compact(buff, []byte(newNode.Text)); err != nil {
+				return
+			}
+			newNode.Text = buff.String()
+		}
+
 		*children = append(*children, newNode)
 	}
+}
+
+// Retun true if the element must be ignored.
+// - Ignore style
+// - Ignore script other than for linked data
+func ignoreElementNode(srcNode *html.Node) bool {
+	if srcNode.Namespace != "" {
+		return false
+	}
+
+	if srcNode.DataAtom == atom.Style {
+		return true
+	} else if srcNode.DataAtom == atom.Script {
+		for _, attr := range srcNode.Attr {
+			if attr.Namespace == "" && attr.Key == "type" && attr.Val == mimeLdJSON {
+				return false
+			}
+		}
+		return true
+	}
+
+	return false
 }
 
 func (node *Node) addAttributes(srcAttributes []html.Attribute) {
@@ -114,7 +156,7 @@ func (node *Node) addAttributes(srcAttributes []html.Attribute) {
 }
 
 // From this document, get all url from anchor element.
-// Filter url with protocol different of http or https.
+// Filter url with protocol different to http or https.
 func (node Node) GetURL(origin *url.URL) []*url.URL {
 	foundedURL := make(map[string]bool, 0)
 	node.Visit(func(node Node) {

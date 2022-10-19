@@ -34,14 +34,12 @@ func TestParse(t *testing.T) {
 						Text:    "Hello World",
 					},
 					Node{Text: "\n\t"},
-					Node{
-						TagName: atom.Script,
-						Text:    "\n\t\tconsole.log('Hello');\n\n\t",
-					},
+					Node{Text: "\n\t"},
 					Node{Text: "\n\t"},
 					Node{
-						TagName: atom.Style,
-						Text:    "\n\t\t.yolo {\n\t\t\tcolor: red;\n\t\t}\n\n\t",
+						TagName:    atom.Script,
+						Attributes: map[string]string{"type": "application/ld+json"},
+						Text:       `{"@context":"https:\/\/schema.org","@type":"Article","name":"Minijupe","url":"https:\/\/fr.wikipedia.org\/wiki\/Minijupe","sameAs":"http:\/\/www.wikidata.org\/entity\/Q230823","mainEntity":"http:\/\/www.wikidata.org\/entity\/Q230823","author":{"@type":"Organization","name":"Contributeurs aux projets Wikimedia"},"publisher":{"@type":"Organization","name":"Fondation Wikimedia, Inc.","logo":{"@type":"ImageObject","url":"https:\/\/www.wikimedia.org\/static\/images\/wmf-hor-googpub.png"}},"datePublished":"2005-11-21T14:16:45Z","dateModified":"2022-10-19T05:21:00Z","image":"https:/\/upload.wikimedia.org\/wikipedia\/commons\/b\/b0\/Minirock_%28Lack%29_Photo_Model_2.jpg","headline":"jupe tr\u00e8s courte, droite ou pliss\u00e9e, \u00ab dont la longueur ne devrait pas exc\u00e9der 10 cm sous les fesses pour justifier de cette appellation \u00bb"}`,
 					},
 					Node{Text: "\n"},
 				},
