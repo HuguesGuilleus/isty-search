@@ -54,16 +54,21 @@ func (db *Existence) Exist(key Key) bool {
 	return db.keys[key]
 }
 
-// Filter remove known url from the list.
+// Filter remove known url from the list, and remove duplicated URL.
 func (db *Existence) Filter(list []*url.URL) []*url.URL {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
 
-	filtered := make([]*url.URL, 0, len(list))
+	m := make(map[string]*url.URL, len(list))
 	for _, u := range list {
 		if db.keys[NewURLKey(u)] {
 			continue
 		}
+		m[u.String()] = u
+	}
+
+	filtered := make([]*url.URL, 0, len(list))
+	for _, u := range m {
 		filtered = append(filtered, u)
 	}
 

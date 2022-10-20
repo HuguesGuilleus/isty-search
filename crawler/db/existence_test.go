@@ -56,6 +56,7 @@ func TestExistenceFilter(t *testing.T) {
 	received := db.Filter([]*url.URL{
 		googleURL,
 		rootGoogleURL,
+		rootGoogleURL,
 		googleURL,
 	})
 	assert.Equal(t, []*url.URL{rootGoogleURL}, received)
