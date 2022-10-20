@@ -1,6 +1,7 @@
 package db
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/url"
@@ -78,12 +79,20 @@ func (db *Existence) Close() error {
 	return db.file.Close()
 }
 
-func ReadExistence(filePath string, fn func(key Key)) error {
+func ReadExistence(filePath string, numberOfKeys *int, fn func(key Key)) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("ReadExistence(%q) %w", filePath, err)
 	}
 	defer file.Close()
+
+	if numberOfKeys != nil {
+		info, err := file.Stat()
+		if err != nil {
+			return fmt.Errorf("ReadExistence(%q) %w", filePath, err)
+		}
+		*numberOfKeys = int(info.Size() / sha256.Size)
+	}
 
 	if err := readKeys(file, fn); err != nil {
 		return fmt.Errorf("ReadExistence(%q) %w", filePath, err)

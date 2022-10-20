@@ -28,14 +28,16 @@ func TestExistence(t *testing.T) {
 
 	assert.NoError(t, db.Close())
 
+	numberOfKeys := -1
 	i := 0
-	err = ReadExistence(dbPath, func(key Key) {
+	err = ReadExistence(dbPath, &numberOfKeys, func(key Key) {
 		assert.Equal(t, keys[i], key, i)
 		i++
 	})
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(keys), i)
+	assert.Equal(t, len(keys), numberOfKeys)
 }
 
 func TestExistenceFilter(t *testing.T) {
