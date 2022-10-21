@@ -78,6 +78,23 @@ func TestFileAllow(t *testing.T) {
 	allow("/squelettes/images/yolo", true)
 }
 
+func TestDefaultRobots(t *testing.T) {
+	allow := func(urlString string) {
+		url, err := url.Parse(urlString)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.True(t, DefaultRobots.Allow(url), urlString)
+	}
+
+	allow("/")
+	allow("?fdbg")
+	allow("/squelettes/")
+	allow("/squelettes/yolo")
+	allow("/squelettes/images/")
+	allow("/squelettes/images/yolo")
+}
+
 func BenchmarkWikipedia(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Parse(exWikipedia)
