@@ -30,7 +30,7 @@ type File struct {
 	Rules []Rule
 }
 
-var DefaultRobots = &File{}
+var DefaultRobots = File{}
 
 // Parse the robots.txt file content to create a new File.
 func Parse(content []byte) (file File) {

@@ -2,16 +2,11 @@ package robotstxt
 
 import (
 	_ "embed"
+	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt/test_data"
 	"github.com/stretchr/testify/assert"
 	"net/url"
 	"testing"
 )
-
-//go:embed ex-robots-monde-diplomatique.txt
-var exRobotsMondeDiplomatique []byte
-
-//go:embed ex-wikipedia-com.txt
-var exWikipedia []byte
 
 func TestParse(t *testing.T) {
 	// Begin File from https://www.mediapart.fr/robots.txt (2022-09-05)
@@ -33,7 +28,7 @@ func TestParse(t *testing.T) {
 			{false, "/extensions/", []string{}, false},
 			{false, "/ecrire/", []string{}, false},
 		},
-	}, Parse(exRobotsMondeDiplomatique))
+	}, Parse(robotstxtTestData.MondeDiplomatique))
 }
 
 func TestDevCutLines(t *testing.T) {
@@ -61,7 +56,7 @@ Disallow: /youth/dissemination/`+
 }
 
 func TestFileAllow(t *testing.T) {
-	file := Parse(exRobotsMondeDiplomatique)
+	file := Parse(robotstxtTestData.MondeDiplomatique)
 
 	allow := func(urlString string, expected bool) {
 		url, err := url.Parse(urlString)
@@ -97,6 +92,6 @@ func TestDefaultRobots(t *testing.T) {
 
 func BenchmarkWikipedia(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Parse(exWikipedia)
+		Parse(robotstxtTestData.Wikipedia)
 	}
 }
