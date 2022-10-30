@@ -197,6 +197,22 @@ func (node Node) Visit(f func(Node)) {
 	}
 }
 
+// Call f on each node, and sub node.
+// If f return true, do not walk into children.
+func (node Node) Walk(f func(Node) bool) {
+	toVisit := make([]Node, 1)
+	toVisit[0] = node
+
+	for len(toVisit) > 0 {
+		n := toVisit[len(toVisit)-1]
+		if f(n) {
+			toVisit = toVisit[:len(toVisit)-1]
+		} else {
+			toVisit = append(toVisit[:len(toVisit)-1], n.Children...)
+		}
+	}
+}
+
 func (node *Node) PrintLines() []string {
 	lines := make([]string, 0)
 	node.printLines("", &lines)
