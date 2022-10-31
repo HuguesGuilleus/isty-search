@@ -90,9 +90,36 @@ func searchNode(n *html.Node, expected atom.Atom) *html.Node {
 }
 
 func convertOneNode(srcNode *html.Node) Node {
-	output := make([]Node, 0, 1)
-	convertNode(srcNode, &output)
-	return output[0]
+	newNode := Node{
+		Namespace: srcNode.Namespace,
+		TagName:   srcNode.DataAtom,
+	}
+	newNode.Id, newNode.Classes, newNode.Attributes = convertAttributes(srcNode.Attr)
+
+	if first := srcNode.FirstChild; first != nil {
+		if first == srcNode.LastChild && first.Type == html.TextNode {
+			// only one text node
+			newNode.Text = srcNode.FirstChild.Data
+		} else {
+			newNode.Children = make([]Node, 0)
+			for child := srcNode.FirstChild; child != nil; child = child.NextSibling {
+				convertNode(child, &newNode.Children)
+			}
+		}
+	}
+
+	if newNode.Namespace == "" &&
+		newNode.TagName == atom.Script &&
+		newNode.Attributes["type"] == mimeLdJSON {
+		buff := recycler.Get()
+		defer recycler.Recycle(buff)
+
+		if err := json.Compact(buff, []byte(newNode.Text)); err == nil {
+			newNode.Text = buff.String()
+		}
+	}
+
+	return newNode
 }
 
 // Convert a html.Node and his children into a Node.
@@ -104,38 +131,7 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 		if ignoreElementNode(srcNode) {
 			return
 		}
-
-		newNode := Node{
-			Namespace: srcNode.Namespace,
-			TagName:   srcNode.DataAtom,
-		}
-		newNode.Id, newNode.Classes, newNode.Attributes = convertAttributes(srcNode.Attr)
-
-		if first := srcNode.FirstChild; first != nil {
-			if first == srcNode.LastChild && first.Type == html.TextNode {
-				// only one text node
-				newNode.Text = srcNode.FirstChild.Data
-			} else {
-				newNode.Children = make([]Node, 0)
-				for child := srcNode.FirstChild; child != nil; child = child.NextSibling {
-					convertNode(child, &newNode.Children)
-				}
-			}
-		}
-
-		if newNode.Namespace == "" &&
-			newNode.TagName == atom.Script &&
-			newNode.Attributes["type"] == mimeLdJSON {
-			buff := recycler.Get()
-			defer recycler.Recycle(buff)
-
-			if err := json.Compact(buff, []byte(newNode.Text)); err != nil {
-				return
-			}
-			newNode.Text = buff.String()
-		}
-
-		*children = append(*children, newNode)
+		*children = append(*children, convertOneNode(srcNode))
 	}
 }
 
