@@ -22,7 +22,7 @@ type Page struct {
 
 	// Content, on of the following filed.
 	Error  string
-	Node   *htmlnode.Node
+	Html   *htmlnode.Root
 	Robots *robotstxt.File
 }
 

@@ -33,7 +33,7 @@ var (
 		return &crawler.Page{
 			URL:  *pageSourceURL,
 			Time: time.Now().UTC(),
-			Node: node,
+			Html: node,
 		}
 	}()
 
@@ -85,7 +85,12 @@ func TestSaver(t *testing.T) {
 			page := testDecoder[crawler.Page](data, encoder.decode, compressor.decompressor)
 			assert.Equal(t, testPageSource.URL, page.URL, name)
 			assert.Equal(t, testPageSource.Time, page.Time, name)
-			assert.Equal(t, testPageSource.Node.PrintLines(), page.Node.PrintLines(), name)
+			assert.Equal(t, testPageSource.Html.RootId, page.Html.RootId, name)
+			assert.Equal(t, testPageSource.Html.RootClasses, page.Html.RootClasses, name)
+			assert.Equal(t, testPageSource.Html.RootAttributes, page.Html.RootAttributes, name)
+			assert.Equal(t, testPageSource.Html.Meta, page.Html.Meta, name)
+			assert.Equal(t, testPageSource.Html.Head.PrintLines(), page.Html.Head.PrintLines(), name)
+			assert.Equal(t, testPageSource.Html.Body.PrintLines(), page.Html.Body.PrintLines(), name)
 			t.Logf(format, name, len(data))
 		}
 		t.Log()
