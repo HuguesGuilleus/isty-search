@@ -15,6 +15,18 @@ import (
 
 const mimeLdJSON = "application/ld+json"
 
+// The <html> element node.
+type Root struct {
+	// Root element attributes
+	RootId         string
+	RootClasses    []string
+	RootAttributes map[string]string
+
+	Meta Meta
+	Head Node
+	Body Node
+}
+
 // One html node, it can contain text or children. In case of pure text node,
 // it do not contain Namespace, TagName and Attributes.
 type Node struct {
@@ -33,28 +45,38 @@ type Node struct {
 	Text string
 }
 
-// From html content, get Node.
-func Parse(data []byte) (*Node, error) {
-	root, err := html.Parse(bytes.NewReader(data))
+// From html content, get Root.
+func Parse(data []byte) (*Root, error) {
+	firstNode, err := html.Parse(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
 
-	return convertRoot(root), nil
+	htmlNode := searchNode(firstNode, atom.Html)
+	headNode := searchNode(htmlNode, atom.Head)
+	bodyNode := searchNode(htmlNode, atom.Body)
+
+	rootId, rootClass, rootAttributes := convertAttributes(htmlNode.Attr)
+	root := &Root{
+		RootId:         rootId,
+		RootClasses:    rootClass,
+		RootAttributes: rootAttributes,
+		Head:           convertOneNode(headNode),
+		Body:           convertOneNode(bodyNode),
+	}
+	root.fillMeta()
+
+	return root, nil
 }
 
-// Search the root element and convert it in Node. So it remove doctype,
-// some global comment, and the document node.
-func convertRoot(n *html.Node) *Node {
+// Get the first html.Node white no Namespace and DataAtom == expected.
+func searchNode(n *html.Node, expected atom.Atom) *html.Node {
 	if n == nil {
 		return nil
 	}
-
 	for {
-		if n.Type == html.ElementNode && n.Namespace == "" && n.DataAtom == atom.Html {
-			output := make([]Node, 0, 1)
-			convertNode(n, &output)
-			return &output[0]
+		if n.DataAtom == expected && n.Namespace == "" {
+			return n
 		} else if n.FirstChild != nil {
 			n = n.FirstChild
 		} else if n.NextSibling != nil {
@@ -65,6 +87,12 @@ func convertRoot(n *html.Node) *Node {
 			return nil
 		}
 	}
+}
+
+func convertOneNode(srcNode *html.Node) Node {
+	output := make([]Node, 0, 1)
+	convertNode(srcNode, &output)
+	return output[0]
 }
 
 // Convert a html.Node and his children into a Node.
@@ -81,7 +109,7 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 			Namespace: srcNode.Namespace,
 			TagName:   srcNode.DataAtom,
 		}
-		newNode.addAttributes(srcNode.Attr)
+		newNode.Id, newNode.Classes, newNode.Attributes = convertAttributes(srcNode.Attr)
 
 		if first := srcNode.FirstChild; first != nil {
 			if first == srcNode.LastChild && first.Type == html.TextNode {
@@ -111,7 +139,7 @@ func convertNode(srcNode *html.Node, children *[]Node) {
 	}
 }
 
-// Retun true if the element must be ignored.
+// Return true if the element must be ignored.
 // - Ignore style
 // - Ignore script other than for linked data
 func ignoreElementNode(srcNode *html.Node) bool {
@@ -133,33 +161,29 @@ func ignoreElementNode(srcNode *html.Node) bool {
 	return false
 }
 
-func (node *Node) addAttributes(srcAttributes []html.Attribute) {
-	if len(srcAttributes) == 0 {
-		return
-	}
-
-	node.Attributes = make(map[string]string, len(srcAttributes))
+func convertAttributes(srcAttributes []html.Attribute) (id string, classes []string, newAttr map[string]string) {
+	newAttr = make(map[string]string, len(srcAttributes))
 	for _, attr := range srcAttributes {
-		if attr.Namespace == "" {
-			switch attr.Key {
-			case "class":
-				node.Classes = strings.FieldsFunc(attr.Val, unicode.IsSpace)
-			case "id":
-				node.Id = attr.Val
-			default:
-				node.Attributes[attr.Key] = attr.Val
-			}
-		} else {
-			node.Attributes[attr.Namespace+":"+attr.Key] = attr.Val
+		if attr.Namespace != "" {
+			continue
+		}
+		switch key := strings.ToLower(attr.Key); key {
+		case "class":
+			classes = strings.FieldsFunc(attr.Val, unicode.IsSpace)
+		case "id":
+			id = attr.Val
+		default:
+			newAttr[key] = attr.Val
 		}
 	}
+	return
 }
 
 // From this document, get all url from anchor element.
 // Filter url with protocol different to http or https.
-func (node Node) GetURL(origin *url.URL) []*url.URL {
+func (root Root) GetURL(origin *url.URL) []*url.URL {
 	foundedURL := make(map[string]bool, 0)
-	node.Visit(func(node Node) {
+	root.Body.Visit(func(node Node) {
 		if node.TagName == atom.A {
 			if href := node.Attributes["href"]; href != "" {
 				foundedURL[href] = true

@@ -16,42 +16,37 @@ type Meta struct {
 	LinkedData [][]byte
 }
 
-// Visit the head to get some information stored into Meta.
-func GetMeta(root Node) (meta Meta) {
-	openGraph := make([][2]string, 0)
+// Fill .Meta field.
+func (root *Root) fillMeta() {
+	root.Meta.Langage = root.RootAttributes["lang"]
 
-	root.Walk(func(node Node) bool {
+	openGraph := make([][2]string, 0)
+	root.Head.Visit(func(node Node) {
 		switch node.TagName {
-		case atom.Html:
-			meta.Langage = node.Attributes["lang"]
-		case atom.Body:
-			return true
 		case atom.Title:
 			if node.Text != "" {
-				meta.Title = node.Text
+				root.Meta.Title = node.Text
 			}
 		case atom.Script:
 			if node.Attributes["type"] == "application/ld+json" {
 				if node.Text != "" {
-					meta.LinkedData = append(meta.LinkedData, []byte(node.Text))
+					root.Meta.LinkedData = append(root.Meta.LinkedData, []byte(node.Text))
 				}
 			}
 		case atom.Meta:
 			content := node.Attributes["content"]
 			if content == "" {
-				return true
+				return
 			}
 			if node.Attributes["name"] == "description" {
-				meta.Description = content
+				root.Meta.Description = content
 			} else if p := node.Attributes["property"]; strings.HasPrefix(p, "og:") {
 				openGraph = append(openGraph, [2]string{p, content})
 			}
 		}
-		return false
 	})
 
-	meta.OpenGraph = parseOpenGraph(openGraph)
-	return
+	root.Meta.OpenGraph = parseOpenGraph(openGraph)
 }
 
 type OpenGraph struct {
