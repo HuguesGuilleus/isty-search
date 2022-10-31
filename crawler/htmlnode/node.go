@@ -158,8 +158,7 @@ func ignoreElementNode(srcNode *html.Node) bool {
 }
 
 func convertAttributes(srcAttributes []html.Attribute) (id string, classes []string, newAttr map[string]string) {
-	newAttr = make(map[string]string, len(srcAttributes))
-	for _, attr := range srcAttributes {
+	for i, attr := range srcAttributes {
 		if attr.Namespace != "" {
 			continue
 		}
@@ -169,6 +168,9 @@ func convertAttributes(srcAttributes []html.Attribute) (id string, classes []str
 		case "id":
 			id = attr.Val
 		default:
+			if newAttr == nil {
+				newAttr = make(map[string]string, len(srcAttributes)-i)
+			}
 			newAttr[key] = attr.Val
 		}
 	}

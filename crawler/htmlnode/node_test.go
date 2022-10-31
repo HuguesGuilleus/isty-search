@@ -83,10 +83,7 @@ func TestParse(t *testing.T) {
 
 	assert.Equal(t, expected.Body.PrintLines(), received.Body.PrintLines())
 	assert.Equal(t, expected.Head.PrintLines(), received.Head.PrintLines())
-	assert.Equal(t, expected.Meta, received.Meta)
-	assert.Equal(t, expected.RootAttributes, received.RootAttributes)
-	assert.Equal(t, expected.RootClasses, received.RootClasses)
-	assert.Equal(t, expected.RootId, received.RootId)
+	assert.Equal(t, expected, received)
 }
 
 func TestGetURL(t *testing.T) {
