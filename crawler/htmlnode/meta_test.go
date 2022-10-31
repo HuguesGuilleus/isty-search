@@ -18,6 +18,9 @@ func TestFillMeta(t *testing.T) {
 		Title:       "MaPrimeRénov : avis du Défenseur des droits sur la dématérialisation | vie-publique.fr",
 		Description: "La Défenseure des droits a été saisie de près de 500 réclamations rapportant les difficultés rencontrées par les usagers souhaitant bénéficier de MaPrimeRénov lors de leur démarche en ligne. Elle émet des recommandations à l'Agence nationale de l’habitat (Anah) en charge du dispositif d'aide à la rénovation des logements.",
 
+		NoIndex:  true,
+		NoFollow: true,
+
 		OpenGraph: OpenGraph{
 			Title:       "MaPrimeRénov : la dématérialisation de la demande dénoncée par la Défenseure des droits",
 			Description: "La Défenseure des droits a été saisie de près de 500 réclamations rapportant les difficultés rencontrées par les usagers souhaitant bénéficier de MaPrimeRénov lors de leur démarche en ligne. Elle émet des recommandations à l'Agence nationale de l’habitat (Anah) en charge du dispositif d'aide à la rénovation des logements.",

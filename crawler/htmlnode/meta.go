@@ -4,12 +4,16 @@ import (
 	"golang.org/x/net/html/atom"
 	"net/url"
 	"strings"
+	"unicode"
 )
 
 type Meta struct {
 	Langage     string
 	Title       string
 	Description string
+
+	NoFollow bool
+	NoIndex  bool
 
 	OpenGraph OpenGraph
 
@@ -38,16 +42,34 @@ func (root *Root) fillMeta() {
 			if content == "" {
 				return
 			}
-			if node.Attributes["name"] == "description" {
+			switch node.Attributes["name"] {
+			case "description":
 				root.Meta.Description = content
-			} else if p := node.Attributes["property"]; strings.HasPrefix(p, "og:") {
-				openGraph = append(openGraph, [2]string{p, content})
+			case "robots":
+				for _, value := range strings.FieldsFunc(content, isSpaceAndComa) {
+					switch value {
+					case "noindex":
+						root.Meta.NoIndex = true
+					case "nofollow":
+						root.Meta.NoFollow = true
+					case "none":
+						root.Meta.NoIndex = true
+						root.Meta.NoFollow = true
+					}
+				}
+			default:
+				if p := node.Attributes["property"]; strings.HasPrefix(p, "og:") {
+					openGraph = append(openGraph, [2]string{p, content})
+				}
 			}
+
 		}
 	})
 
 	root.Meta.OpenGraph = parseOpenGraph(openGraph)
 }
+
+func isSpaceAndComa(r rune) bool { return r == ',' || unicode.IsSpace(r) }
 
 type OpenGraph struct {
 	// Required properties:
