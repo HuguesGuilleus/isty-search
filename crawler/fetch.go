@@ -3,14 +3,11 @@ package crawler
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
-	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
 	"io"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 )
 
@@ -24,6 +21,7 @@ type fetchContext struct {
 	filterPage []func(*htmlnode.Root) string
 
 	roundTripper http.RoundTripper
+
 	// The max size of the html page.
 	maxLength int64
 
@@ -34,68 +32,43 @@ type fetchContext struct {
 	// The used value if determined by the robots.txt.
 	// Must: minCrawlDelay < maxCrawlDelay
 	minCrawlDelay, maxCrawlDelay time.Duration
-
-	logOutput io.Writer
-	logMutex  sync.Mutex
 }
 
-func fetchList(context *fetchContext, host string, urls []*url.URL) {
-	urls = context.db.Existence.Filter(urls)
-
-	if len(urls) == 0 {
-		return
-	}
-
-	robot := robotGet(context.db, host, context.roundTripper)
-
+func fetchList(ctx *fetchContext, host string, urls []*url.URL) {
+	urls, crawDelay := strikeURLs(ctx, host, urls)
 	for _, u := range urls {
-		fetchOne(context, robot, u)
-		context.sleep(robot)
+		fetchOne(ctx, u)
+		ctx.sleep(crawDelay)
 	}
 }
 
-func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
-	ban := func(reason string) {
-		ctx.log("filter", u, reason)
-		ctx.db.Ban.Add(u)
-		ctx.db.save(u, &Page{Error: reason})
-	}
-
-	// URL strike
-	if !robot.Allow(u) {
-		ban("robots.txt")
-		return
-	}
-	for _, filter := range ctx.filterURL {
-		if strike := filter(u); strike != "" {
-			ban(strike)
-			return
-		}
-	}
-
-	// get the body
+func fetchOne(ctx *fetchContext, u *url.URL) {
+	// Get the body
 	body, redirect, errString := fetchBytes(u, ctx.roundTripper, 1, ctx.maxLength)
 	if errString != "" {
-		ban(errString)
+		ctx.db.ban(u, errString)
 		return
 	} else if redirect != nil {
 		ctx.db.save(u, &Page{Redirect: redirect})
+		ctx.outputURL <- []*url.URL{redirect}
 		return
 	}
 	defer recycler.Recycle(body)
+
 	htmlRoot, err := htmlnode.Parse(body.Bytes())
 	if err != nil {
-		ban(err.Error())
+		ctx.db.ban(u, err.Error())
+		return
 	}
 
 	// Post filter
 	if htmlRoot.Meta.NoIndex {
-		ban("noindex")
+		ctx.db.ban(u, "noindex")
 		return
 	}
 	for _, filter := range ctx.filterPage {
 		if strike := filter(htmlRoot); strike != "" {
-			ban(strike)
+			ctx.db.ban(u, strike)
 			return
 		}
 	}
@@ -106,21 +79,22 @@ func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
 	}
 
 	// Save it
-	ctx.log("store", u)
-
 	page := &Page{Html: htmlRoot}
 	ctx.db.save(u, page)
+
 	for _, process := range ctx.process {
 		process(page)
 	}
+
+	return
 }
 
-// Strike all url (from same host):
+// Strike all url (from same host), and return it with crawDelay.
 // - Already cached
 // - The path is "/robots.txt"
 // - Filtered
 // - Blocked by robots.
-func strikeURLs(ctx *fetchContext, host string, urls []*url.URL) []*url.URL {
+func strikeURLs(ctx *fetchContext, host string, urls []*url.URL) ([]*url.URL, int) {
 	robotsGetter := robotGetter(ctx.db, host, ctx.roundTripper)
 	validURLs := make([]*url.URL, 0, len(urls))
 
@@ -149,26 +123,15 @@ urlFor:
 		validURLs = append(validURLs, u)
 	}
 
-	return validURLs
-}
-
-func (ctx *fetchContext) log(op string, u *url.URL, args ...any) {
-	buff := recycler.Get()
-	defer recycler.Recycle(buff)
-
-	fmt.Fprintf(buff, "%s [%s] <%s>", time.Now().Format("2006-01-02 15:04:05"), op, u)
-	for _, arg := range args {
-		fmt.Fprintf(buff, " %v", arg)
+	if len(validURLs) == 0 {
+		return nil, 0
 	}
-	buff.WriteByte('\n')
 
-	ctx.logMutex.Lock()
-	defer ctx.logMutex.Unlock()
-	buff.WriteTo(ctx.logOutput)
+	return validURLs, robotsGetter().CrawlDelay
 }
 
-func (ctx *fetchContext) sleep(robots robotstxt.File) {
-	delay := time.Duration(robots.CrawlDelay) * time.Second
+func (ctx *fetchContext) sleep(crawDelay int) {
+	delay := time.Duration(crawDelay) * time.Second
 	if delay < ctx.minCrawlDelay {
 		delay = ctx.minCrawlDelay
 	}
