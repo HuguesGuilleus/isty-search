@@ -13,13 +13,13 @@ func TestGetRobotstxt(t *testing.T) {
 	db := db.OpenObjectBD[Page]("__test_db")
 	defer os.RemoveAll("__test_db")
 
-	robots := getRobotstxt(db, "www.monde-diplomatique.fr", mapRoundTripper{
+	robots := robotGetter(db, "www.monde-diplomatique.fr", mapRoundTripper{
 		"https://www.monde-diplomatique.fr/robots.txt": robotstxtTestData.MondeDiplomatique,
-	})
+	})()
 	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique), robots)
 
-	robotsSecod := getRobotstxt(db, "www.monde-diplomatique.fr", mapRoundTripper{})
-	// We test only CrawlDelay because the rules can contain empty slice or
-	// nil slice and for the assert packeg is different.
+	robotsSecod := robotGetter(db, "www.monde-diplomatique.fr", mapRoundTripper{})()
+	// The assert package make a difference between empty slice and nil slice,
+	// so we test only CrawlDelay (type int).
 	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique).CrawlDelay, robotsSecod.CrawlDelay)
 }

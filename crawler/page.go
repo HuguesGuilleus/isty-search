@@ -26,10 +26,23 @@ type Page struct {
 	Robots *robotstxt.File
 }
 
-// getRobotstxt load ir, or download and store it from the objectDB.
-// Do not use the context filters.
+// Get once the robots file. See robotGet for details.
+func robotGetter(objectDB db.ObjectBD[Page], host string, roundTripper http.RoundTripper) func() robotstxt.File {
+	robot := robotstxt.File{}
+	todo := true
+	return func() robotstxt.File {
+		if todo {
+			todo = false
+			robot = robotGet(objectDB, host, roundTripper)
+		}
+		return robot
+	}
+}
+
+// RobotGetter load it, or download and store it from the objectDB.
 // On error (from cache or when download), use robotstxt.DefaultRobots.
-func getRobotstxt(objectDB db.ObjectBD[Page], host string, roundTripper http.RoundTripper) robotstxt.File {
+// If cache is more than 24h, dowload it.
+func robotGet(objectDB db.ObjectBD[Page], host string, roundTripper http.RoundTripper) robotstxt.File {
 	u := url.URL{
 		Scheme: "https",
 		Host:   host,

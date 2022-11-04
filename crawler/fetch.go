@@ -44,7 +44,7 @@ func fetchList(context *fetchContext, host string, urls []*url.URL) {
 		return
 	}
 
-	robot := getRobotstxt(context.db.Object, host, context.roundTripper)
+	robot := robotGet(context.db.Object, host, context.roundTripper)
 
 	for _, u := range urls {
 		fetchOne(context, robot, u)
@@ -153,7 +153,6 @@ func (ctx *fetchContext) log(op string, u *url.URL, args ...any) {
 
 	ctx.logMutex.Lock()
 	defer ctx.logMutex.Unlock()
-
 	buff.WriteTo(ctx.logOutput)
 }
 
