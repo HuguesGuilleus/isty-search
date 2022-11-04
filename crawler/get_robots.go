@@ -3,23 +3,10 @@ package crawler
 import (
 	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
 	"github.com/HuguesGuilleus/isty-search/crawler/db"
-	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
 	"net/http"
 	"net/url"
-	"time"
 )
-
-type Page struct {
-	URL  url.URL
-	Time time.Time
-
-	// Content, on of the following filed.
-	Error    string
-	Html     *htmlnode.Root
-	Robots   *robotstxt.File
-	Redirect *url.URL
-}
 
 // Get once the robots file. See robotGet for details.
 func robotGetter(objectDB db.ObjectBD[Page], host string, roundTripper http.RoundTripper) func() robotstxt.File {
@@ -54,19 +41,17 @@ func robotGet(objectDB db.ObjectBD[Page], host string, roundTripper http.RoundTr
 		return robotstxt.DefaultRobots
 	}
 
-	page := &Page{
-		URL:  u,
-		Time: time.Now(),
-	}
-	defer objectDB.Store(key, page)
-
 	robots := robotstxt.DefaultRobots
 	if buff, _, _ := fetchBytes(&u, roundTripper, 5, 500_1024); buff != nil {
 		robots = robotstxt.Parse(buff.Bytes())
 		recycler.Recycle(buff)
 	}
 
-	page.Robots = &robots
+	objectDB.Store(key, &Page{
+		URL:    u,
+		Time:   now(),
+		Robots: &robots,
+	})
 
 	return robots
 }
