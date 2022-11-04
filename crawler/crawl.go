@@ -11,7 +11,7 @@ import (
 type Config struct {
 	Context context.Context
 
-	// The database, DB or the root if Db is nil.
+	// The database, DB or the root if DB is nil.
 	DBRoot string
 	DB     *DB
 
@@ -21,21 +21,21 @@ type Config struct {
 	// Filter by URL of the page (for exemple by the language).
 	// Empty string return signify no error.
 	FilterURL  []func(*url.URL) string
-	FilterPage []func(*htmlnode.Node) string
+	FilterPage []func(*htmlnode.Root) string
 
 	// Function to process all page.
-	Process []func(*htmlnode.Node)
+	Process []func(*Page)
 
 	// The min and max CrawlDelay.
 	// The used value if determined by the robots.txt.
 	// Must: minCrawlDelay < maxCrawlDelay
-	minCrawlDelay, maxCrawlDelay time.Duration
+	MinCrawlDelay, MaxCrawlDelay time.Duration
 
 	// log Output.
 	// No log for nil value.
 	LogOutput io.Writer
 }
 
-func Crawle(config Config) error {
+func Crawl(config Config) error {
 	return nil
 }

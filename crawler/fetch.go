@@ -26,7 +26,7 @@ type fetchContext struct {
 	maxLength int64
 
 	// Function to process all page.
-	process []func(*htmlnode.Root)
+	process []func(*Page)
 
 	// The min and max CrawlDelay.
 	// The used value if determined by the robots.txt.
@@ -118,9 +118,6 @@ func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
 			return
 		}
 	}
-	for _, process := range ctx.process {
-		process(htmlRoot)
-	}
 
 	// Get URL
 	if !htmlRoot.Meta.NoFollow {
@@ -129,11 +126,15 @@ func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
 
 	// Save it
 	ctx.log("store", u)
-	ctx.db.Object.Store(key, &Page{
+	page := &Page{
 		URL:  *u,
 		Time: now(),
 		Html: htmlRoot,
-	})
+	}
+	ctx.db.Object.Store(key, page)
+	for _, process := range ctx.process {
+		process(page)
+	}
 }
 
 func now() time.Time {
