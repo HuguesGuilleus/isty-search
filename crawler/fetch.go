@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
@@ -84,32 +83,22 @@ func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
 	}
 
 	// get the body
-	ctxTimeout, ctxCancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer ctxCancel()
-	request, err := http.NewRequestWithContext(ctxTimeout, http.MethodGet, u.String(), nil)
+	body, redirect, errString := fetchBytes(u, ctx.roundTripper, 1, ctx.maxLength)
+	if errString != "" {
+		ban(errString)
+		return
+	} else if redirect != nil {
+		ctx.db.Object.Store(key, &Page{
+			URL:      *u,
+			Time:     now(),
+			Redirect: redirect,
+		})
+	}
+	defer recycler.Recycle(body)
+	htmlRoot, err := htmlnode.Parse(body.Bytes())
 	if err != nil {
 		ban(err.Error())
-		return
 	}
-	response, err := ctx.roundTripper.RoundTrip(request)
-	if err != nil {
-		ban(err.Error())
-		return
-	} else if response.StatusCode/100 != 2 {
-		ban("http.noOK")
-		return
-	}
-	buff := recycler.Get()
-	defer recycler.Recycle(buff)
-	defer response.Body.Close()
-	if _, err := buff.ReadFrom(&io.LimitedReader{
-		R: response.Body,
-		N: ctx.maxLength,
-	}); err != nil && err != io.EOF {
-		ban(err.Error())
-		return
-	}
-	htmlRoot, err := htmlnode.Parse(buff.Bytes())
 
 	// Post filter
 	if htmlRoot.Meta.NoIndex {
@@ -213,6 +202,8 @@ func fetchBytes(u *url.URL, roundTripper http.RoundTripper, maxRedirect int, max
 	return buff, nil, ""
 }
 
+// Get the location from response headers.
+// The bytes buffer is allways nil.
 func getLocation(u *url.URL, response *http.Response) (*bytes.Buffer, *url.URL, string) {
 	redirectString := response.Header.Get("Location")
 	if redirectString == "" {
