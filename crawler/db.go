@@ -9,13 +9,13 @@ import (
 // A composite DB with sub subdatabase for specific usage.
 type DB struct {
 	Object    db.ObjectBD[Page]
-	Existence *db.Existence
+	Existence db.Existence
 	URLs      *db.URLsDB
 	Ban       *db.BanURL
 }
 
 func OpenDB(root string) (*DB, error) {
-	existence, err := db.OpenExistence(filepath.Join(root, "existence-key.bin"))
+	existence, err := db.OpenExistenceFile(filepath.Join(root, "existence-key.bin"))
 	if err != nil {
 		return nil, err
 	}
