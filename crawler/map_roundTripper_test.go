@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	// "testing"
 	"bytes"
 	"io"
 	"net/http"
