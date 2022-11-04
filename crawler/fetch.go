@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
-	"github.com/HuguesGuilleus/isty-search/crawler/db"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
 	"io"
@@ -47,7 +46,7 @@ func fetchList(context *fetchContext, host string, urls []*url.URL) {
 		return
 	}
 
-	robot := robotGet(context.db.Object, host, context.roundTripper)
+	robot := robotGet(context.db, host, context.roundTripper)
 
 	for _, u := range urls {
 		fetchOne(context, robot, u)
@@ -56,18 +55,10 @@ func fetchList(context *fetchContext, host string, urls []*url.URL) {
 }
 
 func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
-	key := db.NewURLKey(u)
-	defer ctx.db.Existence.Add(key)
-
 	ban := func(reason string) {
 		ctx.log("filter", u, reason)
 		ctx.db.Ban.Add(u)
-		ctx.db.Object.Store(key, &Page{
-			URL:   *u,
-			Time:  now(),
-			Error: reason,
-		})
-		return
+		ctx.db.save(u, &Page{Error: reason})
 	}
 
 	// URL strike
@@ -88,11 +79,8 @@ func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
 		ban(errString)
 		return
 	} else if redirect != nil {
-		ctx.db.Object.Store(key, &Page{
-			URL:      *u,
-			Time:     now(),
-			Redirect: redirect,
-		})
+		ctx.db.save(u, &Page{Redirect: redirect})
+		return
 	}
 	defer recycler.Recycle(body)
 	htmlRoot, err := htmlnode.Parse(body.Bytes())
@@ -119,19 +107,12 @@ func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
 
 	// Save it
 	ctx.log("store", u)
-	page := &Page{
-		URL:  *u,
-		Time: now(),
-		Html: htmlRoot,
-	}
-	ctx.db.Object.Store(key, page)
+
+	page := &Page{Html: htmlRoot}
+	ctx.db.save(u, page)
 	for _, process := range ctx.process {
 		process(page)
 	}
-}
-
-func now() time.Time {
-	return time.Now().UTC()
 }
 
 func (ctx *fetchContext) log(op string, u *url.URL, args ...any) {

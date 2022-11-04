@@ -72,3 +72,12 @@ func (database *DB) Close() error {
 
 	return nil
 }
+
+func (database *DB) save(u *url.URL, page *Page) {
+	key := db.NewURLKey(u)
+
+	page.Time = time.Now().UTC()
+	page.URL = *u
+
+	database.Object.Store(key, page)
+}
