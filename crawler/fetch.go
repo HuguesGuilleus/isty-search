@@ -1,7 +1,9 @@
 package crawler
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
 	"github.com/HuguesGuilleus/isty-search/crawler/db"
@@ -13,6 +15,8 @@ import (
 	"sync"
 	"time"
 )
+
+var tooRedirect = errors.New("Too redirect")
 
 type fetchContext struct {
 	db        *DB
@@ -165,4 +169,62 @@ func (ctx *fetchContext) sleep(robots robotstxt.File) {
 		delay = ctx.maxCrawlDelay
 	}
 	time.Sleep(delay)
+}
+
+// Fetch the url, and return: the body, the redirect URL or the error.
+func fetchBytes(u *url.URL, roundTripper http.RoundTripper, maxRedirect int, maxBody int64) (*bytes.Buffer, *url.URL, string) {
+	client := http.Client{
+		Transport: roundTripper,
+		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
+			if len(via) > maxRedirect {
+				return tooRedirect
+			}
+			return nil
+		},
+		Timeout: time.Duration(maxRedirect) * time.Second,
+	}
+
+	response, err := client.Get(u.String())
+	if err != nil {
+		if errors.Is(err, tooRedirect) {
+			return getLocation(u, response)
+		}
+		return nil, nil, err.Error()
+	}
+	defer response.Body.Close()
+
+	if code := response.StatusCode / 100; code == 3 {
+		return getLocation(u, response)
+	} else if code != 2 {
+		return nil, nil, "http error:" + response.Status
+	}
+
+	buff := recycler.Get()
+	if l := response.ContentLength; l > 0 && l < maxBody {
+		buff.Grow(int(l))
+	} else {
+		buff.Grow(int(maxBody))
+	}
+	if _, err := buff.ReadFrom(io.LimitReader(response.Body, maxBody)); err != nil {
+		recycler.Recycle(buff)
+		return nil, nil, err.Error()
+	}
+
+	return buff, nil, ""
+}
+
+func getLocation(u *url.URL, response *http.Response) (*bytes.Buffer, *url.URL, string) {
+	redirectString := response.Header.Get("Location")
+	if redirectString == "" {
+		return nil, nil, "redirect without URL"
+	}
+	redirect, err := u.Parse(redirectString)
+	if err != nil {
+		return nil, nil, "redirect with wrong syntax"
+	}
+	redirect.RawQuery = redirect.Query().Encode()
+	if redirect.String() == u.String() {
+		return nil, nil, "redirect to the same url"
+	}
+	return nil, redirect, ""
 }

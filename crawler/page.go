@@ -1,29 +1,24 @@
 package crawler
 
 import (
-	"errors"
 	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
 	"github.com/HuguesGuilleus/isty-search/crawler/db"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
-	"io"
 	"net/http"
 	"net/url"
 	"time"
 )
-
-const robotsMaxRedirect = 5
-
-var robotsMaxRedirectTooManyRedirect = errors.New("Too many redirect (limit=5)")
 
 type Page struct {
 	URL  url.URL
 	Time time.Time
 
 	// Content, on of the following filed.
-	Error  string
-	Html   *htmlnode.Root
-	Robots *robotstxt.File
+	Error    string
+	Html     *htmlnode.Root
+	Robots   *robotstxt.File
+	Redirect *url.URL
 }
 
 // Get once the robots file. See robotGet for details.
@@ -65,32 +60,11 @@ func robotGet(objectDB db.ObjectBD[Page], host string, roundTripper http.RoundTr
 	}
 	defer objectDB.Store(key, page)
 
-	// Download it
-	client := http.Client{
-		Transport: roundTripper,
-		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
-			if len(via) > robotsMaxRedirect {
-				return robotsMaxRedirectTooManyRedirect
-			}
-			return nil
-		},
-		Timeout: robotsMaxRedirect * time.Second,
+	robots := robotstxt.DefaultRobots
+	if buff, _, _ := fetchBytes(&u, roundTripper, 5, 500_1024); buff != nil {
+		robots = robotstxt.Parse(buff.Bytes())
+		recycler.Recycle(buff)
 	}
-	response, err := client.Get(u.String())
-	if err != nil {
-		page.Error = err.Error()
-		return robotstxt.DefaultRobots
-	}
-
-	// Parse the response
-	buff := recycler.Get()
-	defer recycler.Recycle(buff)
-	defer response.Body.Close()
-	if _, err := io.CopyN(buff, response.Body, 500_1024); err != nil && err != io.EOF {
-		page.Error = err.Error()
-		return robotstxt.DefaultRobots
-	}
-	robots := robotstxt.Parse(buff.Bytes())
 
 	page.Robots = &robots
 

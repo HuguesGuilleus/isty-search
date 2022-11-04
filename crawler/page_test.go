@@ -18,8 +18,8 @@ func TestGetRobotstxt(t *testing.T) {
 	})()
 	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique), robots)
 
-	robotsSecod := robotGetter(db, "www.monde-diplomatique.fr", mapRoundTripper{})()
+	robotsSecond := robotGetter(db, "www.monde-diplomatique.fr", mapRoundTripper{})()
 	// The assert package make a difference between empty slice and nil slice,
 	// so we test only CrawlDelay (type int).
-	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique).CrawlDelay, robotsSecod.CrawlDelay)
+	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique).CrawlDelay, robotsSecond.CrawlDelay)
 }
