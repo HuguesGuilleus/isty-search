@@ -11,7 +11,11 @@ import (
 type Key [sha256.Size]byte
 
 func NewURLKey(u *url.URL) Key {
-	return Key(sha256.Sum256([]byte(u.String())))
+	return NewStringKey(u.String())
+}
+
+func NewStringKey(s string) Key {
+	return Key(sha256.Sum256([]byte(s)))
 }
 
 // Retunrn the value in hexadecimal

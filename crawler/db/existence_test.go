@@ -8,46 +8,63 @@ import (
 	"testing"
 )
 
-func TestExistence(t *testing.T) {
+var keys = func() (keys [1024]Key) {
+	for i := range keys {
+		rand.Read(keys[i][:])
+	}
+	return
+}()
+
+func TestExistenceMap(t *testing.T) {
+	db := OpenExistenceMap()
+	testExistenceAddExistClose(t, db)
+}
+
+func TestExistenceFile(t *testing.T) {
 	dbPath := "existence.db"
 	os.Remove(dbPath)
 	defer os.Remove(dbPath)
 
-	db, err := OpenExistence(dbPath)
+	db, err := OpenExistenceFile(dbPath)
 	assert.NoError(t, err)
+	testExistenceAddExistClose(t, db)
 
-	var keys [1024]Key
+	expectedMap := make(map[Key]bool, len(keys))
+	for _, key := range keys {
+		expectedMap[key] = true
+	}
+	loadedKeys, err := LoadExistenceFile(dbPath)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedMap, loadedKeys)
+}
+
+func testExistenceAddExistClose(t *testing.T, db Existence) {
 	for i := range keys {
-		rand.Read(keys[i][:])
 		assert.NoError(t, db.Add(keys[i]))
 	}
-
 	for _, k := range keys {
 		assert.True(t, db.Exist(k), k)
 	}
 
 	assert.NoError(t, db.Close())
-
-	numberOfKeys := -1
-	i := 0
-	err = ReadExistence(dbPath, &numberOfKeys, func(key Key) {
-		assert.Equal(t, keys[i], key, i)
-		i++
-	})
-	assert.NoError(t, err)
-
-	assert.Equal(t, len(keys), i)
-	assert.Equal(t, len(keys), numberOfKeys)
 }
 
-func TestExistenceFilter(t *testing.T) {
+func TestExistenceFileFilter(t *testing.T) {
 	dbPath := "existence.db"
 	os.Remove(dbPath)
 	defer os.Remove(dbPath)
 
-	db, err := OpenExistence(dbPath)
+	db, err := OpenExistenceFile(dbPath)
 	defer db.Close()
 	assert.NoError(t, err)
+	testExistenceFilter(t, db)
+}
+
+func TestExistenceMapFilter(t *testing.T) {
+	testExistenceFilter(t, OpenExistenceMap())
+}
+
+func testExistenceFilter(t *testing.T, db Existence) {
 	assert.NoError(t, db.Add(NewURLKey(googleURL)))
 
 	rootGoogleURL, err := googleURL.Parse("/")
