@@ -115,6 +115,43 @@ func fetchOne(ctx *fetchContext, robot robotstxt.File, u *url.URL) {
 	}
 }
 
+// Strike all url (from same host):
+// - Already cached
+// - The path is "/robots.txt"
+// - Filtered
+// - Blocked by robots.
+func strikeURLs(ctx *fetchContext, host string, urls []*url.URL) []*url.URL {
+	robotsGetter := robotGetter(ctx.db, host, ctx.roundTripper)
+	validURLs := make([]*url.URL, 0, len(urls))
+
+urlFor:
+	for _, u := range ctx.db.Existence.Filter(urls) {
+		// Is a /robots.txt
+		if u.Path == robotsPath {
+			// Do not save the ban into the DB.
+			continue urlFor
+		}
+
+		// Context filters
+		for _, filter := range ctx.filterURL {
+			if reason := filter(u); reason != "" {
+				ctx.db.ban(u, reason)
+				continue urlFor
+			}
+		}
+
+		// Robots.txt
+		if !robotsGetter().Allow(u) {
+			ctx.db.ban(u, "robots.txt")
+			continue urlFor
+		}
+
+		validURLs = append(validURLs, u)
+	}
+
+	return validURLs
+}
+
 func (ctx *fetchContext) log(op string, u *url.URL, args ...any) {
 	buff := recycler.Get()
 	defer recycler.Recycle(buff)

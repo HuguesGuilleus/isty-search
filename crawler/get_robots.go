@@ -8,16 +8,18 @@ import (
 	"net/url"
 )
 
+const robotsPath = "/robots.txt"
+
 // Get once the robots file. See robotGet for details.
-func robotGetter(database *DB, host string, roundTripper http.RoundTripper) func() robotstxt.File {
+func robotGetter(database *DB, host string, roundTripper http.RoundTripper) func() *robotstxt.File {
 	robot := robotstxt.File{}
 	todo := true
-	return func() robotstxt.File {
+	return func() *robotstxt.File {
 		if todo {
 			todo = false
 			robot = robotGet(database, host, roundTripper)
 		}
-		return robot
+		return &robot
 	}
 }
 
@@ -28,7 +30,7 @@ func robotGet(database *DB, host string, roundTripper http.RoundTripper) robotst
 	u := url.URL{
 		Scheme: "https",
 		Host:   host,
-		Path:   "/robots.txt",
+		Path:   robotsPath,
 	}
 	key := db.NewURLKey(&u)
 

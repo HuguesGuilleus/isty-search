@@ -73,6 +73,13 @@ func (database *DB) Close() error {
 	return nil
 }
 
+// Ban a url for a specific reason.
+func (database *DB) ban(u *url.URL, reason string) {
+	database.Ban.Add(u)
+	database.save(u, &Page{Error: reason})
+}
+
+// Save a page in the (existence and object) DB.
 func (database *DB) save(u *url.URL, page *Page) {
 	key := db.NewURLKey(u)
 

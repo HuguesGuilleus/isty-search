@@ -17,12 +17,12 @@ func TestGetRobotstxt(t *testing.T) {
 		Existence: db.OpenExistenceMap(),
 	}
 
-	robots := robotGetter(database, "www.monde-diplomatique.fr", mapRoundTripper{
+	robots := *robotGetter(database, "www.monde-diplomatique.fr", mapRoundTripper{
 		"https://www.monde-diplomatique.fr/robots.txt": robotstxtTestData.MondeDiplomatique,
 	})()
 	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique), robots)
 
-	robotsSecond := robotGetter(database, "www.monde-diplomatique.fr", mapRoundTripper{})()
+	robotsSecond := *robotGetter(database, "www.monde-diplomatique.fr", mapRoundTripper{})()
 	// The assert package make a difference between empty slice and nil slice,
 	// so we test only CrawlDelay (type int).
 	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique).CrawlDelay, robotsSecond.CrawlDelay)
