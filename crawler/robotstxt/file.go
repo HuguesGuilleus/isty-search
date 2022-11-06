@@ -33,6 +33,7 @@ type File struct {
 var DefaultRobots = File{}
 
 // Parse the robots.txt file content to create a new File.
+// Do not share memory with the input content.
 func Parse(content []byte) (file File) {
 	rules := parseLines(content)
 
@@ -45,7 +46,7 @@ func Parse(content []byte) (file File) {
 				file.CrawlDelay = delay
 			}
 		case keySitemap:
-			u, _ := url.Parse(rule[1])
+			u, _ := url.Parse(strings.Clone(rule[1]))
 			if u != nil && u.Scheme == "https" {
 				file.SiteMap = append(file.SiteMap, *u)
 			}
@@ -54,7 +55,7 @@ func Parse(content []byte) (file File) {
 
 	// Get user-agent, allow and disallow rules.
 	for _, rule := range filterLines(rules) {
-		m := parseMatcher(rule[1], rule[0] == keyAllow)
+		m := parseMatcher(strings.Clone(rule[1]), rule[0] == keyAllow)
 		if m != nil {
 			file.Rules = append(file.Rules, *m)
 		}

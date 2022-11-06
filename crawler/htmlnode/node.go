@@ -191,7 +191,7 @@ func (root Root) GetURL(origin *url.URL) []*url.URL {
 
 	sliceURL := make([]*url.URL, 0, len(foundedURL))
 	for stringURL := range foundedURL {
-		u, _ := origin.Parse(stringURL)
+		u, _ := origin.Parse(strings.Clone(stringURL))
 		if u == nil {
 			continue
 		} else if u.Scheme != "https" && u.Scheme != "http" {
