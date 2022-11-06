@@ -6,6 +6,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 const robotsPath = "/robots.txt"
@@ -35,9 +36,8 @@ func robotGet(database *DB, host string, roundTripper http.RoundTripper) robotst
 	key := db.NewURLKey(&u)
 
 	// Get from the DB
-	if page, _ := database.Object.Get(key); page != nil {
+	if page, _ := database.Object.Get(key); page != nil && time.Since(page.Time) < time.Hour*24 {
 		if page.Robots != nil {
-			// check < 24h
 			return *page.Robots
 		}
 		return robotstxt.DefaultRobots
