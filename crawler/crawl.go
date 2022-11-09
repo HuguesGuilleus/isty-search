@@ -29,6 +29,9 @@ type Config struct {
 	// 15M for Google https://developers.google.com/search/docs/crawling-indexing/googlebot#how-googlebot-accesses-your-site
 	MaxLength int64
 
+	// Maximum of crawl goroutine
+	MaxGo int
+
 	// The min and max CrawlDelay.
 	// The used value if determined by the robots.txt.
 	// Must: minCrawlDelay < maxCrawlDelay
@@ -39,17 +42,28 @@ type Config struct {
 	LogOutput io.Writer
 }
 
-func Crawl(ctx context.Context, config Config) error {
-	db := config.DB
-	if db == nil {
-		err := error(nil)
-		db, err = OpenDB(config.DBRoot)
+func Crawl(mainContext context.Context, config Config) error {
+	db, foundURLs, err := OpenDB(config.DBRoot)
+	if err != nil {
 		return fmt.Errorf("Open Composite DB (%q): %w", config.DBRoot, err)
 	}
 	defer db.Close()
 
-	fc := &fetchContext{
+	input := make([]*url.URL, len(config.Input))
+	for i, s := range config.Input {
+		u, err := url.Parse(s)
+		if err != nil {
+			return fmt.Errorf("Parse URL %q: %w", s, err)
+		}
+		input[i] = u
+	}
+
+	end := make(chan struct{})
+	fetchContext := &fetchContext{
 		db:            db,
+		hosts:         make(map[string]*host),
+		end:           end,
+		maxGo:         config.MaxGo,
 		filterURL:     config.FilterURL,
 		filterPage:    config.FilterPage,
 		roundTripper:  newlogRoundTripper(nil, config.LogOutput),
@@ -58,8 +72,16 @@ func Crawl(ctx context.Context, config Config) error {
 		minCrawlDelay: config.MinCrawlDelay,
 		maxCrawlDelay: config.MaxCrawlDelay,
 	}
+	defer fetchContext.wg.Wait()
 
-	_ = fc
+	fetchContext.loadURLS(foundURLs)
+	fetchContext.addURLs(input)
+
+	select {
+	case <-end:
+	case <-mainContext.Done():
+		fetchContext.close = true
+	}
 
 	return nil
 }

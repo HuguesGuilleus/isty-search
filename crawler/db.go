@@ -25,49 +25,49 @@ type Page struct {
 type DB struct {
 	Object    db.ObjectBD[Page]
 	Existence db.Existence
-	URLs      *db.URLsDB
+	Found     *db.Found
 	Ban       *db.BanURL
 }
 
-func OpenDB(root string) (*DB, error) {
+func OpenDB(root string) (*DB, []*url.URL, error) {
 	existence, err := db.OpenExistenceFile(filepath.Join(root, "existence-key.bin"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	urls, err := db.OpenURLsDB(filepath.Join(root, "url"))
+	found, urls, err := db.OpenFound(filepath.Join(root, "found.txt"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ban, err := db.OpenBanURL(filepath.Join(root, "ban.txt"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &DB{
 		Object:    db.OpenObjectBD[Page](filepath.Join(root, "object")),
 		Existence: existence,
-		URLs:      urls,
+		Found:     found,
 		Ban:       ban,
-	}, nil
+	}, urls, nil
 }
 
 func (database *DB) Close() error {
 	if err := database.Existence.Close(); err != nil {
-		return fmt.Errorf("Close exitence DB: %w", err)
+		return fmt.Errorf("Close Existence DB: %w", err)
 	}
 
-	if err := database.URLs.Close(); err != nil {
-		return fmt.Errorf("Close URLs DB: %w", err)
+	if err := database.Found.Close(); err != nil {
+		return fmt.Errorf("Close Found DB: %w", err)
 	}
 
 	if err := database.Ban.Close(); err != nil {
-		return fmt.Errorf("Close URLs DB: %w", err)
+		return fmt.Errorf("Close Db DB: %w", err)
 	}
 
 	database.Existence = nil
-	database.URLs = nil
+	database.Found = nil
 	database.Ban = nil
 
 	return nil

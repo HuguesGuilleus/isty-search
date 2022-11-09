@@ -18,12 +18,18 @@ var tooRedirect = errors.New("Too redirect")
 
 type fetchContext struct {
 	db *DB
-	// Runtime
+
+	// The Hosts, a map to store all urls that will be crawled.
+	// The key is generate by createKey().
 	hosts      map[string]*host
 	hostsMutex sync.Mutex
 
 	// Channel to signal crawl end.
 	end chan<- struct{}
+	// Ask to close.
+	close bool
+	// Done when all crawl goroutine return.
+	wg sync.WaitGroup
 
 	// Number of current crawl goroutine.
 	lenGo int
@@ -55,6 +61,7 @@ type host struct {
 }
 
 func (ctx *fetchContext) Work() {
+	defer ctx.wg.Done()
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("[defered error]", err)
@@ -67,6 +74,9 @@ func (ctx *fetchContext) Work() {
 		for _, u := range urls {
 			fetchOne(ctx, u)
 			ctx.sleep(crawDelay)
+			if ctx.close {
+				return
+			}
 		}
 	}
 }
@@ -100,6 +110,7 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 
 	if !fetching {
 		ctx.end <- struct{}{}
+		close(ctx.end)
 	}
 
 	ctx.lenGo--
@@ -107,11 +118,26 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 }
 
 func (ctx *fetchContext) addURLs(urls []*url.URL) {
-	// TODO: Store into the file
+	urls = ctx.db.Existence.Filter(urls)
+	ctx.db.Found.AddURLs(urls)
 
 	ctx.hostsMutex.Lock()
 	defer ctx.hostsMutex.Unlock()
 
+	ctx.loadURLS(urls)
+
+	max := len(ctx.hosts)
+	if max > ctx.maxGo {
+		max = ctx.maxGo
+	}
+	for i := ctx.lenGo; i < max; i++ {
+		ctx.wg.Add(1)
+		ctx.lenGo++
+		go ctx.Work()
+	}
+}
+
+func (ctx *fetchContext) loadURLS(urls []*url.URL) {
 	for _, u := range urls {
 		key := createKey(u.Scheme, u.Host)
 		h := ctx.hosts[key]
@@ -124,15 +150,6 @@ func (ctx *fetchContext) addURLs(urls []*url.URL) {
 			ctx.hosts[key] = h
 		}
 		h.urls = append(h.urls, u)
-	}
-
-	max := len(ctx.hosts)
-	if max > ctx.maxGo {
-		max = ctx.maxGo
-	}
-	for i := ctx.lenGo; i < max; i++ {
-		ctx.lenGo++
-		go ctx.Work()
 	}
 }
 
