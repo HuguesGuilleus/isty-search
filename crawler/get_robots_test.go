@@ -13,8 +13,8 @@ func TestGetRobotstxt(t *testing.T) {
 	defer os.RemoveAll("__test_db")
 
 	database := &DB{
-		Object:    db.OpenObjectBD[Page]("__test_db"),
-		Existence: db.OpenExistenceMap(),
+		KeyValueDB: db.OpenKeyValueDB[Page]("__test_db"),
+		Existence:  db.OpenExistenceMap(),
 	}
 
 	robots := *robotGetter(database, "https", "www.monde-diplomatique.fr", mapRoundTripper{

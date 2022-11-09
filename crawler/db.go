@@ -23,10 +23,10 @@ type Page struct {
 
 // A composite DB with sub subdatabase for specific usage.
 type DB struct {
-	Object    db.ObjectBD[Page]
-	Existence db.Existence
-	Found     *db.Found
-	Ban       *db.BanURL
+	KeyValueDB db.KeyValueDB[Page]
+	Existence  db.Existence
+	Found      *db.Found
+	Ban        *db.BanURL
 }
 
 func OpenDB(root string) (*DB, []*url.URL, error) {
@@ -46,10 +46,10 @@ func OpenDB(root string) (*DB, []*url.URL, error) {
 	}
 
 	return &DB{
-		Object:    db.OpenObjectBD[Page](filepath.Join(root, "object")),
-		Existence: existence,
-		Found:     found,
-		Ban:       ban,
+		KeyValueDB: db.OpenKeyValueDB[Page](filepath.Join(root, "object")),
+		Existence:  existence,
+		Found:      found,
+		Ban:        ban,
 	}, urls, nil
 }
 
@@ -86,5 +86,5 @@ func (database *DB) save(u *url.URL, page *Page) {
 	page.Time = time.Now().UTC()
 	page.URL = *u
 
-	database.Object.Store(key, page)
+	database.KeyValueDB.Store(key, page)
 }

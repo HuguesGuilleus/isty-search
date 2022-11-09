@@ -32,7 +32,7 @@ func TestObjectBD(t *testing.T) {
 	}
 	k := NewURLKey(googleURL)
 
-	db := OpenObjectBD[http.Cookie]("./test_db")
+	db := OpenKeyValueDB[http.Cookie]("./test_db")
 	defer os.RemoveAll("test_db")
 
 	assert.NoError(t, db.Store(k, expected))
