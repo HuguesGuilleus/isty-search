@@ -6,16 +6,29 @@ import (
 	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
+	"runtime/debug"
+	"sync"
 	"time"
 )
 
 var tooRedirect = errors.New("Too redirect")
 
 type fetchContext struct {
-	db        *DB
-	outputURL chan<- []*url.URL
+	db *DB
+	// Runtime
+	hosts      map[string]*host
+	hostsMutex sync.Mutex
+
+	// Channel to signal crawl end.
+	end chan<- struct{}
+
+	// Number of current crawl goroutine.
+	lenGo int
+	// Maximum of crawl goroutine
+	maxGo int
 
 	filterURL  []func(*url.URL) string
 	filterPage []func(*htmlnode.Root) string
@@ -34,13 +47,99 @@ type fetchContext struct {
 	minCrawlDelay, maxCrawlDelay time.Duration
 }
 
-func fetchList(ctx *fetchContext, host string, urls []*url.URL) {
-	urls, crawDelay := strikeURLs(ctx, host, urls)
-	for _, u := range urls {
-		fetchOne(ctx, u)
-		ctx.sleep(crawDelay)
+type host struct {
+	scheme   string
+	host     string
+	urls     []*url.URL
+	fetching bool
+}
+
+func (ctx *fetchContext) Work() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("[defered error]", err)
+			debug.PrintStack()
+		}
+	}()
+
+	for h := ctx.tryChooseWork(nil); h != nil; h = ctx.tryChooseWork(h) {
+		urls, crawDelay := ctx.strikeURLs(h.scheme, h.host, h.urls)
+		for _, u := range urls {
+			fetchOne(ctx, u)
+			ctx.sleep(crawDelay)
+		}
 	}
 }
+
+// Get a host that will be crawled.
+func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
+	ctx.hostsMutex.Lock()
+	defer ctx.hostsMutex.Unlock()
+
+	if lastHost != nil {
+		key := createKey(lastHost.scheme, lastHost.host)
+		if len(ctx.hosts[key].urls) == 0 {
+			delete(ctx.hosts, key)
+		} else {
+			ctx.hosts[key].fetching = false
+		}
+	}
+
+	fetching := false
+	for _, h := range ctx.hosts {
+		if h.fetching {
+			fetching = true
+		} else {
+			h.fetching = true
+			returnedHost := *h
+			h.urls = nil
+			return &returnedHost
+		}
+
+	}
+
+	if !fetching {
+		ctx.end <- struct{}{}
+	}
+
+	ctx.lenGo--
+	return nil
+}
+
+func (ctx *fetchContext) addURLs(urls []*url.URL) {
+	// TODO: Store into the file
+
+	ctx.hostsMutex.Lock()
+	defer ctx.hostsMutex.Unlock()
+
+	for _, u := range urls {
+		key := createKey(u.Scheme, u.Host)
+		h := ctx.hosts[key]
+		if h == nil {
+			h = &host{
+				scheme: u.Scheme,
+				host:   u.Host,
+				urls:   make([]*url.URL, 0),
+			}
+			ctx.hosts[key] = h
+		}
+		h.urls = append(h.urls, u)
+	}
+
+	max := len(ctx.hosts)
+	if max > ctx.maxGo {
+		max = ctx.maxGo
+	}
+	for i := ctx.lenGo; i < max; i++ {
+		ctx.lenGo++
+		go ctx.Work()
+	}
+}
+
+// Join the scheme and the host with two point.
+func createKey(scheme, host string) string { return scheme + ":" + host }
+
+/* FETCHING ONE */
 
 func fetchOne(ctx *fetchContext, u *url.URL) {
 	// Get the body
@@ -50,7 +149,7 @@ func fetchOne(ctx *fetchContext, u *url.URL) {
 		return
 	} else if redirect != nil {
 		ctx.db.save(u, &Page{Redirect: redirect})
-		ctx.outputURL <- []*url.URL{redirect}
+		ctx.addURLs([]*url.URL{redirect})
 		return
 	}
 	defer recycler.Recycle(body)
@@ -75,7 +174,7 @@ func fetchOne(ctx *fetchContext, u *url.URL) {
 
 	// Get URL
 	if !htmlRoot.Meta.NoFollow {
-		ctx.outputURL <- htmlRoot.GetURL(u)
+		ctx.addURLs(htmlRoot.GetURL(u))
 	}
 
 	// Save it
@@ -94,8 +193,8 @@ func fetchOne(ctx *fetchContext, u *url.URL) {
 // - The path is "/robots.txt"
 // - Filtered
 // - Blocked by robots.
-func strikeURLs(ctx *fetchContext, host string, urls []*url.URL) ([]*url.URL, int) {
-	robotsGetter := robotGetter(ctx.db, host, ctx.roundTripper)
+func (ctx *fetchContext) strikeURLs(scheme, host string, urls []*url.URL) ([]*url.URL, int) {
+	robotsGetter := robotGetter(ctx.db, scheme, host, ctx.roundTripper)
 	validURLs := make([]*url.URL, 0, len(urls))
 
 urlFor:
