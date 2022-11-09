@@ -14,7 +14,6 @@ func TestGetRobotstxt(t *testing.T) {
 
 	database := &DB{
 		KeyValueDB: db.OpenKeyValueDB[Page]("__test_db"),
-		Existence:  db.OpenExistenceMap(),
 	}
 
 	robots := *robotGetter(database, "https", "www.monde-diplomatique.fr", mapRoundTripper{
