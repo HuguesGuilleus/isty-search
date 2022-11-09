@@ -3,6 +3,7 @@ package htmlnode
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
 	"golang.org/x/net/html"
@@ -14,6 +15,8 @@ import (
 )
 
 const mimeLdJSON = "application/ld+json"
+
+var NeedStructureElements = errors.New("Need a html, head and body elements.")
 
 // The <html> element node.
 type Root struct {
@@ -55,6 +58,9 @@ func Parse(data []byte) (*Root, error) {
 	htmlNode := searchNode(firstNode, atom.Html)
 	headNode := searchNode(htmlNode, atom.Head)
 	bodyNode := searchNode(htmlNode, atom.Body)
+	if htmlNode == nil || headNode == nil || bodyNode == nil {
+		return nil, NeedStructureElements
+	}
 
 	rootId, rootClass, rootAttributes := convertAttributes(htmlNode.Attr)
 	root := &Root{
@@ -81,7 +87,7 @@ func searchNode(n *html.Node, expected atom.Atom) *html.Node {
 			n = n.FirstChild
 		} else if n.NextSibling != nil {
 			n = n.NextSibling
-		} else if n.Parent != nil {
+		} else if n.Parent != nil && n.Parent.NextSibling != nil {
 			n = n.Parent.NextSibling
 		} else {
 			return nil
