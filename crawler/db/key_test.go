@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/url"
@@ -9,13 +10,16 @@ import (
 	"time"
 )
 
-var googleURL = func() *url.URL {
-	u, err := url.Parse("https://www.google.com/search/howsearchworks/?fg=1")
+var googleURL = mustParse("https://www.google.com/search/howsearchworks/?fg=1")
+
+// Parse a URL, and panic on failure.
+func mustParse(s string) *url.URL {
+	u, err := url.Parse(s)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Try parse %q fail: %v", s, err))
 	}
 	return u
-}()
+}
 
 func TestKeyPath(t *testing.T) {
 	assert.Equal(t, "base/3d/d2/98/199842308839e8f2d7e8f6585154e3ce49e77ccc45340a5b064eacddfe",

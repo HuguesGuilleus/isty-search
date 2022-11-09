@@ -7,8 +7,10 @@ import (
 	"path/filepath"
 )
 
+const KeyLen = sha256.Size
+
 // One objet DB key.
-type Key [sha256.Size]byte
+type Key [KeyLen]byte
 
 func NewURLKey(u *url.URL) Key {
 	return NewStringKey(u.String())
