@@ -31,17 +31,20 @@ func TestURLsDB(t *testing.T) {
 
 	urls, err = db.Merge(inputURLS)
 	assert.NoError(t, err)
-	sort.Slice(urls, func(i, j int) bool { return urls[i].String() < urls[j].String() })
-	assert.Equal(t, []*url.URL{
-		mustParse("https://www.google.com/maps"),
-		mustParse("https://www.google.com/search"),
-		mustParse("https://www.google.com/travel"),
-	}, urls)
+	assert.Equal(t, []string{
+		"https://google.com/",
+		"https://www.google.com/",
+		"https://www.google.com/maps",
+		"https://www.google.com/search",
+		"https://www.google.com/travel",
+	}, urls2str(urls))
 
 	// Merge
 	urls, err = db.Merge(inputURLS)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(urls), urls)
+	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://google.com/")])
+	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/")])
 	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/maps")])
 	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/search")])
 	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/travel")])
@@ -49,6 +52,8 @@ func TestURLsDB(t *testing.T) {
 	// Store keys
 	assert.NoError(t, db.store(NewStringKey("https://www.google.com/maps"), 535, true))
 	assert.NoError(t, db.store(NewStringKey("https://www.google.com/search"), 659, false))
+	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://google.com/")])
+	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/")])
 	assert.Equal(t, int64(-535), db.keysMap[NewStringKey("https://www.google.com/maps")])
 	assert.Equal(t, int64(659), db.keysMap[NewStringKey("https://www.google.com/search")])
 	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/travel")])
@@ -57,10 +62,14 @@ func TestURLsDB(t *testing.T) {
 	assert.NoError(t, db.Close(), "close db")
 	db, urls, err = OpenURLsDB(".", 30)
 	assert.NoError(t, err)
-	assert.Equal(t, []*url.URL{
-		mustParse("https://www.google.com/travel"),
-	}, urls)
+	assert.Equal(t, []string{
+		"https://google.com/",
+		"https://www.google.com/",
+		"https://www.google.com/travel",
+	}, urls2str(urls))
 
+	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://google.com/")])
+	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/")])
 	assert.Equal(t, int64(-535), db.keysMap[NewStringKey("https://www.google.com/maps")])
 	assert.Equal(t, int64(659), db.keysMap[NewStringKey("https://www.google.com/search")])
 	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/travel")])
@@ -69,9 +78,64 @@ func TestURLsDB(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(urls), urls)
 
+	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://google.com/")])
+	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/")])
 	assert.Equal(t, int64(-535), db.keysMap[NewStringKey("https://www.google.com/maps")])
 	assert.Equal(t, int64(659), db.keysMap[NewStringKey("https://www.google.com/search")])
 	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/travel")])
 
 	assert.NoError(t, db.Close(), "close db")
+}
+
+func TestGetParentDomain(t *testing.T) {
+	assert.Equal(t, []string{
+		"https://isty.uvsq.fr/",
+		"https://uvsq.fr/",
+		"https://www.isty.uvsq.fr/",
+		"https://www.isty.uvsq.fr:8000/",
+		"https://www.isty.uvsq.fr:8000/dir/file.txt",
+	}, urls2str(getParentURL(mustParse("https://www.isty.uvsq.fr:8000/dir/file.txt"))))
+
+	assert.Equal(t, []string{
+		"https://isty.uvsq.fr/",
+		"https://uvsq.fr/",
+		"https://www.isty.uvsq.fr/",
+		"https://www.isty.uvsq.fr:8000/",
+	}, urls2str(getParentURL(mustParse("https://www.isty.uvsq.fr:8000/"))))
+
+	assert.Equal(t, []string{
+		"https://isty.uvsq.fr/",
+		"https://uvsq.fr/",
+		"https://www.isty.uvsq.fr/",
+		"https://www.isty.uvsq.fr/dir/file.txt",
+	}, urls2str(getParentURL(mustParse("https://www.isty.uvsq.fr/dir/file.txt"))))
+
+	assert.Equal(t, []string{
+		"https://isty.uvsq.fr/",
+		"https://uvsq.fr/",
+		"https://www.isty.uvsq.fr/",
+	}, urls2str(getParentURL(mustParse("https://www.isty.uvsq.fr/"))))
+
+	assert.Equal(t, []string{
+		"https://uvsq.fr/",
+		"https://uvsq.fr/dir/file.txt",
+	}, urls2str(getParentURL(mustParse("https://uvsq.fr/dir/file.txt"))))
+
+	assert.Equal(t, []string{
+		"https://fr/",
+		"https://fr/dir/file.txt",
+	}, urls2str(getParentURL(mustParse("https://fr/dir/file.txt"))))
+}
+
+func urls2str(urls []*url.URL) []string {
+	out := make([]string, len(urls))
+	for i, u := range urls {
+		if u == nil {
+			out[i] = "<nil URL>"
+		} else {
+			out[i] = u.String()
+		}
+	}
+	sort.Strings(out)
+	return out
 }

@@ -118,17 +118,18 @@ func (db *URLsDB) Merge(urls []*url.URL) ([]*url.URL, error) {
 	urlsMap := make(map[string]*url.URL, len(urls))
 forURLs:
 	for _, u := range urls {
-		for _, ignorePath := range IgnorePaths {
-			if u.Path == ignorePath {
-				continue forURLs
+		for _, u := range getParentURL(u) {
+			for _, ignorePath := range IgnorePaths {
+				if u.Path == ignorePath {
+					continue forURLs
+				}
 			}
+			s := u.String()
+			if len(s) >= db.maxURLLen {
+				continue
+			}
+			urlsMap[s] = u
 		}
-		s := u.String()
-		if len(s) >= db.maxURLLen {
-			continue
-		}
-
-		urlsMap[s] = u
 	}
 
 	// Skip Mutex Lock, and returned allocation
@@ -157,6 +158,33 @@ forURLs:
 	}
 
 	return returned, nil
+}
+
+func getParentURL(src *url.URL) []*url.URL {
+	u := *src
+	nbCut := strings.Count(u.Host, ".") - 1
+	urls := make([]*url.URL, 1, nbCut+3)
+
+	urls[0] = src
+	if u.Path != "/" {
+		u.Path = "/"
+		newURL := u
+		urls = append(urls, &newURL)
+	}
+
+	if newHost, _, cutted := strings.Cut(u.Host, ":"); cutted {
+		u.Host = newHost
+		newURL := u
+		urls = append(urls, &newURL)
+	}
+
+	for i := 0; i < nbCut; i++ {
+		u.Host = u.Host[strings.IndexByte(u.Host, '.')+1:]
+		newURL := u
+		urls = append(urls, &newURL)
+	}
+
+	return urls
 }
 
 func (db *URLsDB) Store(key Key, banned bool) error {
