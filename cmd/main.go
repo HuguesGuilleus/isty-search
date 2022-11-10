@@ -44,9 +44,11 @@ func main() {
 			func(root *htmlnode.Root) string {
 				switch root.Meta.Langage {
 				case "":
-					return ""
+					fallthrough
 				case "fr", "fr_FR", "fr-FR", "fr-incl", "fr_incl":
 					return ""
+				case "en":
+					return "unknwo_language"
 				default:
 					log.Println("unknwo_language:", root.Meta.Langage)
 					return "unknwo_language"
