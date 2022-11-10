@@ -117,26 +117,16 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 	return nil
 }
 
+// Add urls in the URLsDB and in the ctx.host, then lauch if it's possible new crawl goroutine.
 func (ctx *fetchContext) addURLs(urls []*url.URL) {
 	urls, _ = ctx.db.URLsDB.Merge(urls)
-
-	ctx.hostsMutex.Lock()
-	defer ctx.hostsMutex.Unlock()
-
 	ctx.loadURLS(urls)
-
-	max := len(ctx.hosts)
-	if max > ctx.maxGo {
-		max = ctx.maxGo
-	}
-	for i := ctx.lenGo; i < max; i++ {
-		ctx.wg.Add(1)
-		ctx.lenGo++
-		go ctx.Work()
-	}
 }
 
 func (ctx *fetchContext) loadURLS(urls []*url.URL) {
+	ctx.hostsMutex.Lock()
+	defer ctx.hostsMutex.Unlock()
+
 	for _, u := range urls {
 		key := createKey(u.Scheme, u.Host)
 		h := ctx.hosts[key]
@@ -149,6 +139,16 @@ func (ctx *fetchContext) loadURLS(urls []*url.URL) {
 			ctx.hosts[key] = h
 		}
 		h.urls = append(h.urls, u)
+	}
+
+	max := len(ctx.hosts)
+	if max > ctx.maxGo {
+		max = ctx.maxGo
+	}
+	for i := ctx.lenGo; i < max; i++ {
+		ctx.wg.Add(1)
+		ctx.lenGo++
+		go ctx.Work()
 	}
 }
 

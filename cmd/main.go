@@ -13,15 +13,16 @@ import (
 )
 
 func main() {
-	log.Println("main()")
+	db, urls, err := crawler.OpenDB("db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 
 	config := crawler.Config{
-		DBRoot: "db",
-		Input: []string{
-			// "https://www.gouvernement.fr/",
-			// "https://www.vie-publique.fr/",
-			"https://www.uvsq.fr",
-		},
+		DB:    db,
+		Input: urls,
+
 		FilterURL: []func(*url.URL) string{
 			func(u *url.URL) string {
 				if u.Scheme != "https" {
@@ -65,8 +66,7 @@ func main() {
 	ctx, ctxCancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer ctxCancel()
 
-	err := crawler.Crawl(ctx, config)
-	if err != nil {
+	if err = crawler.Crawl(ctx, config); err != nil {
 		log.Fatal(err)
 	}
 }

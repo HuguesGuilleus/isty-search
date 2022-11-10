@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"context"
-	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"io"
 	"net/url"
@@ -11,11 +10,10 @@ import (
 
 type Config struct {
 	// The database, DB or the root if DB is nil.
-	DBRoot string
-	DB     *DB
+	DB *DB
 
 	// Root URL to begin to read
-	Input []string
+	Input []*url.URL
 
 	// Filter by URL of the page (for exemple by the language).
 	// Empty string return signify no error.
@@ -43,24 +41,9 @@ type Config struct {
 }
 
 func Crawl(mainContext context.Context, config Config) error {
-	db, foundURLs, err := OpenDB(config.DBRoot)
-	if err != nil {
-		return fmt.Errorf("Open Composite DB (%q): %w", config.DBRoot, err)
-	}
-	defer db.Close()
-
-	input := make([]*url.URL, len(config.Input))
-	for i, s := range config.Input {
-		u, err := url.Parse(s)
-		if err != nil {
-			return fmt.Errorf("Parse URL %q: %w", s, err)
-		}
-		input[i] = u
-	}
-
 	end := make(chan struct{})
 	fetchContext := &fetchContext{
-		db:            db,
+		db:            config.DB,
 		hosts:         make(map[string]*host),
 		end:           end,
 		maxGo:         config.MaxGo,
@@ -74,8 +57,7 @@ func Crawl(mainContext context.Context, config Config) error {
 	}
 	defer fetchContext.wg.Wait()
 
-	fetchContext.loadURLS(foundURLs)
-	fetchContext.addURLs(input)
+	fetchContext.loadURLS(config.Input)
 
 	select {
 	case <-end:
