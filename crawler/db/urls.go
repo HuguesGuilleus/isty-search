@@ -38,19 +38,19 @@ func OpenURLsDB(dir string, maxURLLen int) (*URLsDB, []*url.URL, error) {
 	keysPath := filepath.Join(dir, "urls.key")
 	data, err := os.ReadFile(keysPath)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, nil, fmt.Errorf("Read(%q) %w", keysPath, err)
+		return nil, nil, fmt.Errorf("OpenURLsDB: From file (%q) %w", keysPath, err)
 	}
 	keysMap := urlsDBLoadData(data)
 	keysFile, err := os.OpenFile(keysPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o664)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Read(%q) %w", keysPath, err)
+		return nil, nil, fmt.Errorf("OpenURLsDB: Read(%q) %w", keysPath, err)
 	}
 
 	// Load plain URLs
 	urlsPath := filepath.Join(dir, "urls.txt")
 	data, err = os.ReadFile(urlsPath)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, nil, fmt.Errorf("Read(%q) %w", urlsPath, err)
+		return nil, nil, fmt.Errorf("OpenURLsDB: Read(%q) %w", urlsPath, err)
 	}
 	urls, err := loadURLS(data, keysMap)
 	if err != nil {
@@ -58,7 +58,7 @@ func OpenURLsDB(dir string, maxURLLen int) (*URLsDB, []*url.URL, error) {
 	}
 	urlsFile, err := os.OpenFile(urlsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o664)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Read(%q) %w", urlsPath, err)
+		return nil, nil, fmt.Errorf("OpenURLsDB: Read(%q) %w", urlsPath, err)
 	}
 
 	return &URLsDB{

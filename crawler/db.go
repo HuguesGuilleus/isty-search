@@ -24,58 +24,34 @@ type Page struct {
 // A composite DB with sub subdatabase for specific usage.
 type DB struct {
 	KeyValueDB db.KeyValueDB[Page]
-	Existence  db.Existence
-	Found      *db.Found
-	Ban        *db.BanURL
+	URLsDB     *db.URLsDB
 }
 
 func OpenDB(root string) (*DB, []*url.URL, error) {
-	existence, err := db.OpenExistenceFile(filepath.Join(root, "existence-key.bin"))
-	if err != nil {
-		return nil, nil, err
-	}
+	keyValueDB := db.OpenKeyValueDB[Page](filepath.Join(root, "object"))
 
-	found, urls, err := db.OpenFound(filepath.Join(root, "found.txt"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ban, err := db.OpenBanURL(filepath.Join(root, "ban.txt"))
+	urlsDB, urls, err := db.OpenURLsDB(root, 2048)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return &DB{
-		KeyValueDB: db.OpenKeyValueDB[Page](filepath.Join(root, "object")),
-		Existence:  existence,
-		Found:      found,
-		Ban:        ban,
+		KeyValueDB: keyValueDB,
+		URLsDB:     urlsDB,
 	}, urls, nil
 }
 
 func (database *DB) Close() error {
-	if err := database.Existence.Close(); err != nil {
-		return fmt.Errorf("Close Existence DB: %w", err)
+	if err := database.URLsDB.Close(); err != nil {
+		return fmt.Errorf("Close URLsDB: %w", err)
 	}
-
-	if err := database.Found.Close(); err != nil {
-		return fmt.Errorf("Close Found DB: %w", err)
-	}
-
-	if err := database.Ban.Close(); err != nil {
-		return fmt.Errorf("Close Db DB: %w", err)
-	}
-
-	database.Existence = nil
-	database.Found = nil
-	database.Ban = nil
+	database.URLsDB = nil
 
 	return nil
 }
 
 // Ban a url for a specific reason.
 func (database *DB) ban(u *url.URL, reason string) {
-	database.Ban.Add(u)
 	database.save(u, &Page{Error: reason})
 }
 
@@ -86,5 +62,8 @@ func (database *DB) save(u *url.URL, page *Page) {
 	page.Time = time.Now().UTC()
 	page.URL = *u
 
+	if page.Robots == nil {
+		database.URLsDB.Store(key, page.Error != "")
+	}
 	database.KeyValueDB.Store(key, page)
 }

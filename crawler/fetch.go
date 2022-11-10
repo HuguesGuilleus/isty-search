@@ -118,8 +118,7 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 }
 
 func (ctx *fetchContext) addURLs(urls []*url.URL) {
-	urls = ctx.db.Existence.Filter(urls)
-	ctx.db.Found.AddURLs(urls)
+	urls, _ = ctx.db.URLsDB.Merge(urls)
 
 	ctx.hostsMutex.Lock()
 	defer ctx.hostsMutex.Unlock()
@@ -215,13 +214,7 @@ func (ctx *fetchContext) strikeURLs(scheme, host string, urls []*url.URL) ([]*ur
 	validURLs := make([]*url.URL, 0, len(urls))
 
 urlFor:
-	for _, u := range ctx.db.Existence.Filter(urls) {
-		// Is a /robots.txt
-		if u.Path == robotsPath {
-			// Do not save the ban into the DB.
-			continue urlFor
-		}
-
+	for _, u := range urls {
 		// Context filters
 		for _, filter := range ctx.filterURL {
 			if reason := filter(u); reason != "" {
