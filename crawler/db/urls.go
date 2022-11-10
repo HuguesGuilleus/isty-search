@@ -29,6 +29,11 @@ type URLsDB struct {
 	keysMap   map[Key]int64
 	keysFile  *os.File
 	urlsFile  *os.File
+	end       chan<- struct{}
+	// Statistics
+	nbBan   int
+	nbFound int
+	nbDone  int
 }
 
 func OpenURLsDB(dir string, maxURLLen int) (*URLsDB, []*url.URL, error) {
@@ -61,12 +66,30 @@ func OpenURLsDB(dir string, maxURLLen int) (*URLsDB, []*url.URL, error) {
 		return nil, nil, fmt.Errorf("OpenURLsDB: Read(%q) %w", urlsPath, err)
 	}
 
-	return &URLsDB{
+	end := make(chan struct{})
+	db := &URLsDB{
 		maxURLLen: maxURLLen,
 		keysMap:   keysMap,
 		keysFile:  keysFile,
 		urlsFile:  urlsFile,
-	}, urls, nil
+		end:       end,
+	}
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 30)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				db.stats()
+				fmt.Printf("[DB STATS] done:%d, ban:%d, found:%d, total:%d\n", db.nbDone, db.nbBan, db.nbFound, len(db.keysMap))
+			case <-end:
+				return
+			}
+		}
+	}()
+
+	return db, urls, nil
 }
 
 func loadURLS(data []byte, keysMap map[Key]int64) ([]*url.URL, error) {
@@ -95,6 +118,10 @@ func loadURLS(data []byte, keysMap map[Key]int64) ([]*url.URL, error) {
 
 func (db *URLsDB) Close() error {
 	db.mutex.Lock() // Leave blocked
+
+	db.end <- struct{}{}
+	close(db.end)
+	db.end = nil
 
 	defer func() {
 		db.keysMap = nil
@@ -197,6 +224,11 @@ func (db *URLsDB) Store(key Key, banned bool) error {
 func (db *URLsDB) store(key Key, value int64, banned bool) error {
 	if banned {
 		value = -value
+		db.nbBan++
+	} else if value == existValue {
+		db.nbFound++
+	} else {
+		db.nbDone++
 	}
 	db.keysMap[key] = value
 
@@ -217,6 +249,27 @@ func (db *URLsDB) store(key Key, value int64, banned bool) error {
 	}
 
 	return nil
+}
+
+func (db *URLsDB) stats() {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	db.nbDone = 0
+	db.nbFound = 0
+	db.nbBan = 0
+	for _, value := range db.keysMap {
+		switch {
+		case value == 0:
+			// ignore
+		case value < 0:
+			db.nbBan++
+		case value == existValue:
+			db.nbFound++
+		default:
+			db.nbDone++
+		}
+	}
 }
 
 func urlsDBLoadData(data []byte) map[Key]int64 {
