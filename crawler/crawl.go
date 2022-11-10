@@ -57,6 +57,10 @@ func Crawl(mainContext context.Context, config Config) error {
 	}
 	defer fetchContext.wg.Wait()
 
+	if len(config.Input) == 0 {
+		return nil
+	}
+
 	fetchContext.loadURLS(config.Input)
 
 	select {
