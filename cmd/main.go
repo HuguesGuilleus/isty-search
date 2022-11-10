@@ -45,7 +45,7 @@ func main() {
 				switch root.Meta.Langage {
 				case "":
 					return ""
-				case "fr", "fr_FR", "fr-FR":
+				case "fr", "fr_FR", "fr-FR", "fr-incl", "fr_incl":
 					return ""
 				default:
 					log.Println("unknwo_language:", root.Meta.Langage)
