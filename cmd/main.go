@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 )
@@ -17,23 +18,23 @@ func main() {
 	config := crawler.Config{
 		DBRoot: "db",
 		Input: []string{
-			"https://www.gouvernement.fr/",
-			"https://www.vie-publique.fr/",
+			// "https://www.gouvernement.fr/",
+			// "https://www.vie-publique.fr/",
+			"https://www.uvsq.fr",
 		},
 		FilterURL: []func(*url.URL) string{
 			func(u *url.URL) string {
 				if u.Scheme != "https" {
 					return "url-not_https"
 				}
-				h := u.Host
-				if strings.HasSuffix(h, "legifrance.gouv.fr") {
-					return "url-legifrance"
-				}
-				valid := h == "www.vie-publique.fr" ||
-					strings.HasSuffix(h, "gouvernement.fr") ||
-					strings.HasSuffix(h, "gouv.fr")
-				if !valid {
-					return "url-not_gouv"
+				switch u.Host {
+				case "uvsq.fr":
+				case "cas.uvsq.fr", "cas2.uvsq.fr":
+					return "url-cas_uvsq"
+				default:
+					if !strings.HasSuffix(u.Host, ".uvsq.fr") {
+						return "url-not_uvsq"
+					}
 				}
 				return ""
 			},
@@ -41,17 +42,19 @@ func main() {
 		FilterPage: []func(*htmlnode.Root) string{
 			func(root *htmlnode.Root) string {
 				switch root.Meta.Langage {
+				case "":
+					return ""
 				case "fr", "fr_FR", "fr-FR":
 					return ""
 				default:
-					log.Println("unknwo_langage:", root.Meta.Langage)
-					return "unknwo_langage"
+					log.Println("unknwo_language:", root.Meta.Langage)
+					return "unknwo_language"
 				}
 			},
 		},
 
 		MaxLength: 15_000_000,
-		MaxGo:     20,
+		MaxGo:     30,
 
 		MinCrawlDelay: time.Millisecond * 500,
 		MaxCrawlDelay: time.Second * 10,
@@ -59,7 +62,7 @@ func main() {
 		LogOutput: os.Stdout,
 	}
 
-	ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, ctxCancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer ctxCancel()
 
 	err := crawler.Crawl(ctx, config)
