@@ -40,6 +40,8 @@ func main() {
 
 	flag.StringVar(&dbPath, "db", "db", "dataBase directory path (can not exist)")
 
+	defer func(begin time.Time) { fmt.Println("\nduration: ", time.Since(begin)) }(time.Now())
+
 	os.Args = os.Args[1:]
 	if err := actions[os.Args[0]](); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -110,11 +112,13 @@ func mainVocab() error {
 	db, _ := getDB()
 	defer db.Close()
 
+	pageCounter := search.PageCounter(0)
 	vocabCounter := make(search.VocabCounter)
-	if err := crawler.Process(db, []crawler.Processor{vocabCounter}); err != nil {
+	if err := crawler.Process(db, []crawler.Processor{vocabCounter, &pageCounter}); err != nil {
 		return err
 	}
 
+	log.Println("number of page", pageCounter)
 	log.Println("words number:", len(vocabCounter))
 	log.Println("total words:", vocabCounter.TotalWords())
 
