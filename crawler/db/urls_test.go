@@ -84,6 +84,14 @@ func TestURLsDB(t *testing.T) {
 	assert.Equal(t, int64(659), db.keysMap[NewStringKey("https://www.google.com/search")])
 	assert.Equal(t, int64(1), db.keysMap[NewStringKey("https://www.google.com/travel")])
 
+	forOne := 0
+	db.ForDone(func(key Key) {
+		forOne++
+		assert.Equal(t, 1, forOne, "f executed only once.")
+		assert.Equal(t, NewStringKey("https://www.google.com/search"), key)
+	})
+	assert.Equal(t, 1, forOne, "f executed only once.")
+
 	assert.NoError(t, db.Close(), "close db")
 }
 

@@ -289,3 +289,15 @@ func urlsDBLoadData(data []byte) map[Key]int64 {
 	}
 	return keysMap
 }
+
+// Call f on each done key.
+func (db *URLsDB) ForDone(f func(Key)) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	for key, value := range db.keysMap {
+		if value > existValue {
+			f(key)
+		}
+	}
+}
