@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
+	"github.com/HuguesGuilleus/isty-search/search"
 	"log"
 	"net/url"
 	"os"
@@ -27,6 +28,7 @@ func getDB() (*crawler.DB, []*url.URL) {
 func main() {
 	actions := map[string]func() error{
 		"crawl": mainCrawl,
+		"vocab": mainVocab,
 	}
 	if len(os.Args) < 2 || actions[os.Args[1]] == nil {
 		os.Stderr.WriteString("Unknown action. Possible actions are:\n")
@@ -102,4 +104,19 @@ func mainCrawl() error {
 	defer ctxCancel()
 
 	return crawler.Crawl(ctx, config)
+}
+
+func mainVocab() error {
+	db, _ := getDB()
+	defer db.Close()
+
+	vocabCounter := make(search.VocabCounter)
+	if err := crawler.Process(db, []crawler.Processor{vocabCounter}); err != nil {
+		return err
+	}
+
+	log.Println("words number:", len(vocabCounter))
+	log.Println("total words:", vocabCounter.TotalWords())
+
+	return nil
 }

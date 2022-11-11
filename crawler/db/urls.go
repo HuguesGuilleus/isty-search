@@ -291,13 +291,19 @@ func urlsDBLoadData(data []byte) map[Key]int64 {
 }
 
 // Call f on each done key.
-func (db *URLsDB) ForDone(f func(Key)) {
+func (db *URLsDB) ForDone(f func(key Key, index int, totalKey int) error) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
+	i := 0
 	for key, value := range db.keysMap {
 		if value > existValue {
-			f(key)
+			if err := f(key, i, len(db.keysMap)); err != nil {
+				return fmt.Errorf("ForDone on %q fail: %w", key, err)
+			}
 		}
+		i++
 	}
+
+	return nil
 }
