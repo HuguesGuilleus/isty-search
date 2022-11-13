@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler"
+	"github.com/HuguesGuilleus/isty-search/crawler/db"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/search"
 	"log"
@@ -29,6 +30,7 @@ func main() {
 	actions := map[string]func() error{
 		"crawl": mainCrawl,
 		"vocab": mainVocab,
+		"stats": mainDBStatistics,
 	}
 	if len(os.Args) < 2 || actions[os.Args[1]] == nil {
 		os.Stderr.WriteString("Unknown action. Possible actions are:\n")
@@ -123,4 +125,16 @@ func mainVocab() error {
 	log.Println("total words:", vocabCounter.TotalWords())
 
 	return nil
+}
+
+func mainDBStatistics() error {
+	dataBase, _ := getDB()
+	defer dataBase.Close()
+
+	nb, size, err := db.Statistics(dataBase.URLsDB, dataBase.KeyValueDB)
+
+	log.Printf("  nb: %10d\n", nb)
+	log.Printf("size: %10d\n", size)
+
+	return err
 }
