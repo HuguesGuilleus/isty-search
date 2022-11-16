@@ -1,8 +1,11 @@
 package crawler
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
 	"github.com/HuguesGuilleus/isty-search/crawler/db"
+	"os"
 )
 
 type Processor interface {
@@ -11,7 +14,14 @@ type Processor interface {
 	Process(*Page)
 }
 
-func Process(database *DB, processList []Processor) error {
+func Process(database *DB, processList ...Processor) error {
+	bar := progessBar{
+		buff: recycler.Get(),
+		long: 80,
+	}
+	defer recycler.Recycle(bar.buff)
+	defer bar.clean()
+
 	return database.URLsDB.ForDone(func(key db.Key, i, total int) error {
 		page, err := database.KeyValueDB.Get(key)
 		if err != nil {
@@ -20,10 +30,45 @@ func Process(database *DB, processList []Processor) error {
 			return nil
 		}
 
-		fmt.Printf("[%6d/%6d] %s\n", i, total, page.URL.String())
 		for _, p := range processList {
 			p.Process(page)
 		}
+
+		bar.progress(i, total)
+
 		return nil
 	})
+}
+
+type progessBar struct {
+	buff *bytes.Buffer
+	long int
+
+	previousPercentage int
+}
+
+func (bar *progessBar) progress(position, total int) {
+	percentage := position * 100 / total
+	if percentage == bar.previousPercentage {
+		return
+	}
+	bar.previousPercentage = percentage
+
+	fmt.Fprintf(bar.buff, " %3d %% ", percentage)
+
+	rate := position * bar.long / total
+	for i := 0; i < rate; i++ {
+		bar.buff.WriteRune('█')
+	}
+	for i := rate; i < bar.long; i++ {
+		bar.buff.WriteRune('░')
+	}
+
+	bar.buff.WriteString("\033[1G\033[1F")
+	bar.buff.WriteTo(os.Stdout)
+	bar.buff.Reset()
+}
+
+func (bar *progessBar) clean() {
+	os.Stdout.WriteString("\033[1G\033[K")
 }
