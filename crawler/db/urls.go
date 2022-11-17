@@ -290,6 +290,9 @@ func urlsDBLoadData(data []byte) map[Key]int64 {
 	return keysMap
 }
 
+// Return this error when you whant to stop iteration of ForDone()
+var StopIteration = errors.New("Stop iteration")
+
 // Call f on each done key.
 func (db *URLsDB) ForDone(f func(key Key, index int, totalKey int) error) error {
 	db.mutex.Lock()
@@ -299,6 +302,9 @@ func (db *URLsDB) ForDone(f func(key Key, index int, totalKey int) error) error 
 	for key, value := range db.keysMap {
 		if value > existValue {
 			if err := f(key, i, len(db.keysMap)); err != nil {
+				if errors.Is(err, StopIteration) {
+					return nil
+				}
 				return fmt.Errorf("ForDone on %q fail: %w", key, err)
 			}
 		}
