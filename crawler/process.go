@@ -9,7 +9,7 @@ import (
 )
 
 type Processor interface {
-	// Process a HTML page with notnil Html field.
+	// Process a HTML page with no nil Html field.
 	// Is not executed simultanly
 	Process(*Page)
 }

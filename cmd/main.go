@@ -28,9 +28,10 @@ func getDB() (*crawler.DB, []*url.URL) {
 
 func main() {
 	actions := map[string]func() error{
-		"crawl": mainCrawl,
-		"vocab": mainVocab,
-		"stats": mainDBStatistics,
+		"crawl":    mainCrawl,
+		"vocab":    mainVocab,
+		"stats":    mainDBStatistics,
+		"pagerank": mainPageRank,
 	}
 	if len(os.Args) < 2 || actions[os.Args[1]] == nil {
 		os.Stderr.WriteString("Unknown action. Possible actions are:\n")
@@ -116,13 +117,26 @@ func mainVocab() error {
 
 	pageCounter := search.PageCounter(0)
 	vocabCounter := make(search.VocabCounter)
-	if err := crawler.Process(db, []crawler.Processor{vocabCounter, &pageCounter}); err != nil {
+	if err := crawler.Process(db, vocabCounter, &pageCounter); err != nil {
 		return err
 	}
 
 	log.Println("number of page", pageCounter)
 	log.Println("words number:", len(vocabCounter))
 	log.Println("total words:", vocabCounter.TotalWords())
+
+	return nil
+}
+
+func mainPageRank() error {
+	db, _ := getDB()
+	defer db.Close()
+
+	pageRank := search.NewPageRank()
+	if err := crawler.Process(db, &pageRank); err != nil {
+		return err
+	}
+	pageRank.DevScore()
 
 	return nil
 }
