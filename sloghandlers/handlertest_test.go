@@ -7,13 +7,25 @@ import (
 	"testing"
 )
 
+var expectedRecords = []string{
+	"WARN [simple] attr=42",
+	"ERROR [fatal] group.a1=1 group.a2=2 group.sub.b=true err=EOF",
+	"INFO+1 [hello] number=56 who=world!",
+	"INFO [yolo] XXXXX.http=HTTP XXXXX.YYYYY.swag=42",
+}
+
 func TestHandlerTestEnabled(t *testing.T) {
 	h := NewHandlerRecords(slog.InfoLevel)
 
 	assert.False(t, h.Enabled(slog.DebugLevel))
 	assert.True(t, h.Enabled(slog.InfoLevel))
 	assert.True(t, h.Enabled(slog.WarnLevel))
+	fillLogger(h)
+	assert.Equal(t, expectedRecords, h.Records())
+}
 
+// Add record to the handler.
+func fillLogger(h slog.Handler) {
 	l := slog.New(h)
 	l.Warn("simple", slog.Int("attr", 42))
 	l.Error("fatal", io.EOF, slog.Group("group",
@@ -31,11 +43,4 @@ func TestHandlerTestEnabled(t *testing.T) {
 
 	// Ignored because the level is under Info
 	l.Debug("yoloDebug", "swag", 42)
-
-	assert.Equal(t, []string{
-		"WARN [simple] attr=42",
-		"ERROR [fatal] group.a1=1 group.a2=2 group.sub.b=true err=EOF",
-		"INFO+1 [hello] number=56 who=world!",
-		"INFO [yolo] XXXXX.http=HTTP XXXXX.YYYYY.swag=42",
-	}, h.Records())
 }
