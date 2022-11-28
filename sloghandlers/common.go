@@ -8,7 +8,8 @@ import (
 type commonHandler struct {
 	wrap interface {
 		// Add name, date... before the attributes.
-		Begin(*bytes.Buffer, slog.Record)
+		// Return true to skip.
+		Begin(*bytes.Buffer, slog.Record) bool
 		// Store the buffer.
 		Store(*bytes.Buffer) error
 	}
@@ -28,7 +29,9 @@ func (h *commonHandler) Handle(r slog.Record) error {
 	}
 
 	buff := bytes.Buffer{}
-	h.wrap.Begin(&buff, r)
+	if h.wrap.Begin(&buff, r) {
+		return nil
+	}
 
 	printAttr := func(string, slog.Attr) {}
 	printAttr = func(base string, a slog.Attr) {

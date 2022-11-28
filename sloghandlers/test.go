@@ -18,8 +18,9 @@ type recorder struct {
 	records *[]string
 }
 
-func (_ recorder) Begin(buff *bytes.Buffer, r slog.Record) {
+func (_ recorder) Begin(buff *bytes.Buffer, r slog.Record) bool {
 	fmt.Fprintf(buff, "%s [%s]", r.Level, r.Message)
+	return false
 }
 
 func (r recorder) Store(buff *bytes.Buffer) error {
