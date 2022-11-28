@@ -7,10 +7,10 @@ import (
 )
 
 func TestHandlerSlice(t *testing.T) {
-	h1 := NewHandlerRecords(slog.InfoLevel)
-	h2 := NewHandlerRecords(slog.InfoLevel)
+	r1, h1 := NewHandlerRecords(slog.InfoLevel)
+	r2, h2 := NewHandlerRecords(slog.InfoLevel)
 	fillLogger(NewMultiHandlers(h1, h2))
 
-	assert.Equal(t, expectedRecords, h1.Records())
-	assert.Equal(t, expectedRecords, h2.Records())
+	assert.Equal(t, expectedRecords, *r1)
+	assert.Equal(t, expectedRecords, *r2)
 }

@@ -15,13 +15,13 @@ var expectedRecords = []string{
 }
 
 func TestHandlerTestEnabled(t *testing.T) {
-	h := NewHandlerRecords(slog.InfoLevel)
+	records, h := NewHandlerRecords(slog.InfoLevel)
 
 	assert.False(t, h.Enabled(slog.DebugLevel))
 	assert.True(t, h.Enabled(slog.InfoLevel))
 	assert.True(t, h.Enabled(slog.WarnLevel))
 	fillLogger(h)
-	assert.Equal(t, expectedRecords, h.Records())
+	assert.Equal(t, expectedRecords, *records)
 }
 
 // Add record to the handler.
