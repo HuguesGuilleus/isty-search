@@ -103,8 +103,19 @@ func TestGetParentDomain(t *testing.T) {
 		"https://uvsq.fr/",
 		"https://www.isty.uvsq.fr/",
 		"https://www.isty.uvsq.fr:8000/",
-		"https://www.isty.uvsq.fr:8000/dir/file.txt",
-	}, urls2str(getParentURL(mustParse("https://www.isty.uvsq.fr:8000/dir/file.txt"))))
+		"https://www.isty.uvsq.fr:8000/dir/",
+		"https://www.isty.uvsq.fr:8000/dir/subdir/",
+		"https://www.isty.uvsq.fr:8000/dir/subdir/file.txt",
+	}, urls2str(getParentURL(mustParse("https://www.isty.uvsq.fr:8000/dir/subdir/file.txt"))))
+
+	assert.Equal(t, []string{
+		"https://isty.uvsq.fr/",
+		"https://uvsq.fr/",
+		"https://www.isty.uvsq.fr/",
+		"https://www.isty.uvsq.fr:8000/",
+		"https://www.isty.uvsq.fr:8000/dir/",
+		"https://www.isty.uvsq.fr:8000/dir/",
+	}, urls2str(getParentURL(mustParse("https://www.isty.uvsq.fr:8000/dir/"))))
 
 	assert.Equal(t, []string{
 		"https://isty.uvsq.fr/",
@@ -117,6 +128,7 @@ func TestGetParentDomain(t *testing.T) {
 		"https://isty.uvsq.fr/",
 		"https://uvsq.fr/",
 		"https://www.isty.uvsq.fr/",
+		"https://www.isty.uvsq.fr/dir/",
 		"https://www.isty.uvsq.fr/dir/file.txt",
 	}, urls2str(getParentURL(mustParse("https://www.isty.uvsq.fr/dir/file.txt"))))
 
@@ -128,11 +140,13 @@ func TestGetParentDomain(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"https://uvsq.fr/",
+		"https://uvsq.fr/dir/",
 		"https://uvsq.fr/dir/file.txt",
 	}, urls2str(getParentURL(mustParse("https://uvsq.fr/dir/file.txt"))))
 
 	assert.Equal(t, []string{
 		"https://fr/",
+		"https://fr/dir/",
 		"https://fr/dir/file.txt",
 	}, urls2str(getParentURL(mustParse("https://fr/dir/file.txt"))))
 }

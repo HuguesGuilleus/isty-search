@@ -187,17 +187,24 @@ forURLs:
 	return returned, nil
 }
 
+// TODO: remove query in url.
 func getParentURL(src *url.URL) []*url.URL {
 	u := *src
 	nbCut := strings.Count(u.Host, ".") - 1
 	urls := make([]*url.URL, 1, nbCut+3)
-
 	urls[0] = src
+
 	if u.Path != "/" {
-		u.Path = "/"
-		newURL := u
-		urls = append(urls, &newURL)
+		allPath := ""
+		allParts := strings.Split(u.Path, "/")
+		for _, part := range allParts[:len(allParts)-1] {
+			allPath += part + "/"
+			newURL := u
+			newURL.Path = allPath
+			urls = append(urls, &newURL)
+		}
 	}
+	u.Path = "/"
 
 	if newHost, _, cutted := strings.Cut(u.Host, ":"); cutted {
 		u.Host = newHost
