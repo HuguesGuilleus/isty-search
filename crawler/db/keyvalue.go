@@ -54,9 +54,9 @@ func (db *KeyValueDB[T]) Get(key Key) (*T, error) {
 	data, err := os.ReadFile(key.path(db.base))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("KeyValueDB.Get(%x): Not found", key)
+			return nil, fmt.Errorf("KeyValueDB.Get(%s): Not found", key)
 		}
-		return nil, fmt.Errorf("KeyValueDB.Get(%x): %w", key, err)
+		return nil, fmt.Errorf("KeyValueDB.Get(%s): %w", key, err)
 	}
 
 	buff := recycler.Get()

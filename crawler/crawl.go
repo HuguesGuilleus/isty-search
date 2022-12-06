@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"io"
+	"net/http"
 	"net/url"
 	"time"
 )
@@ -38,6 +39,9 @@ type Config struct {
 	// log Output.
 	// No log for nil value.
 	LogOutput io.Writer
+
+	// Use to fetch all HTTP ressource.
+	RoundTripper http.RoundTripper
 }
 
 func Crawl(mainContext context.Context, config Config) error {
@@ -49,7 +53,7 @@ func Crawl(mainContext context.Context, config Config) error {
 		maxGo:         config.MaxGo,
 		filterURL:     config.FilterURL,
 		filterPage:    config.FilterPage,
-		roundTripper:  newlogRoundTripper(nil, config.LogOutput),
+		roundTripper:  newlogRoundTripper(config.RoundTripper, config.LogOutput),
 		maxLength:     config.MaxLength,
 		process:       config.Process,
 		minCrawlDelay: config.MinCrawlDelay,
