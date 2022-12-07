@@ -2,6 +2,7 @@ package robotstxt
 
 import (
 	_ "embed"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt/datatest"
 	"github.com/stretchr/testify/assert"
 	"net/url"
@@ -59,11 +60,7 @@ func TestFileAllow(t *testing.T) {
 	file := Parse(robotstxtdatatest.MondeDiplomatique)
 
 	allow := func(urlString string, expected bool) {
-		url, err := url.Parse(urlString)
-		if err != nil {
-			t.Fatal(err)
-		}
-		assert.Equal(t, expected, file.Allow(url), urlString)
+		assert.Equal(t, expected, file.Allow(common.ParseURL(urlString)), urlString)
 	}
 
 	allow("/", true)
@@ -75,11 +72,7 @@ func TestFileAllow(t *testing.T) {
 
 func TestDefaultRobots(t *testing.T) {
 	allow := func(urlString string) {
-		url, err := url.Parse(urlString)
-		if err != nil {
-			t.Fatal(err)
-		}
-		assert.True(t, DefaultRobots.Allow(url), urlString)
+		assert.True(t, DefaultRobots.Allow(common.ParseURL(urlString)), urlString)
 	}
 
 	allow("/")

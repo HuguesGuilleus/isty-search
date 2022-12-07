@@ -2,9 +2,9 @@ package htmlnode
 
 import (
 	_ "embed"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html/atom"
-	"net/url"
 	"sort"
 	"testing"
 )
@@ -87,28 +87,20 @@ func TestParse(t *testing.T) {
 }
 
 func TestGetURL(t *testing.T) {
-	mustParse := func(s string) *url.URL {
-		u, err := url.Parse(s)
-		if err != nil {
-			panic(err)
-		}
-		return u
-	}
-
 	root, err := Parse(exampleURLHtml)
 	assert.NoError(t, err)
 
-	receivedURL := root.GetURL(mustParse("https://example.com/dir/subdir/file.html"))
+	receivedURL := root.GetURL(common.ParseURL("https://example.com/dir/subdir/file.html"))
 	sort.Slice(receivedURL, func(i, j int) bool {
 		return receivedURL[i].String() < receivedURL[j].String()
 	})
 
-	assert.Equal(t, []*url.URL{
-		mustParse("https://example.com/"),
-		mustParse("https://example.com/dir/"),
-		mustParse("https://example.com/dir/subdir/file.html"),
-		mustParse("https://example.com/dir/subdir/file.html?a=1&b=2"),
-		mustParse("https://example.com/swag"),
-		mustParse("https://github.com/"),
-	}, receivedURL)
+	assert.Equal(t, common.ParseURLs(
+		"https://example.com/",
+		"https://example.com/dir/",
+		"https://example.com/dir/subdir/file.html",
+		"https://example.com/dir/subdir/file.html?a=1&b=2",
+		"https://example.com/swag",
+		"https://github.com/",
+	), receivedURL)
 }

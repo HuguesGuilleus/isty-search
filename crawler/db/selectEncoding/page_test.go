@@ -7,12 +7,12 @@ import (
 	_ "embed"
 	"encoding/gob"
 	"encoding/json"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
 	"io"
-	"net/url"
 	"testing"
 	"time"
 )
@@ -21,10 +21,7 @@ var (
 	//go:embed Nicéphore_II_Phocas.html
 	testPageSourceBytes []byte
 	testPageSource      = func() *crawler.Page {
-		pageSourceURL, err := url.Parse("https://fr.wikipedia.org/wiki/Wikip%C3%A9dia:Accueil_principal")
-		if err != nil {
-			panic(err)
-		}
+		pageSourceURL := common.ParseURL("https://fr.wikipedia.org/wiki/Wikip%C3%A9dia:Accueil_principal")
 		node, err := htmlnode.Parse(testPageSourceBytes)
 		if err != nil {
 			panic(err)

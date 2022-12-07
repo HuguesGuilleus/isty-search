@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	"fmt"
+	"github.com/HuguesGuilleus/isty-search/common"
 	database "github.com/HuguesGuilleus/isty-search/crawler/db"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/stretchr/testify/assert"
@@ -17,27 +17,6 @@ import (
 	"testing"
 )
 
-// TODO: Move to a global package
-func mustParse(s string) *url.URL {
-	u, err := url.Parse(s)
-	if err != nil {
-		panic(err)
-	}
-	return u
-}
-
-func mustParseSlice(args ...string) []*url.URL {
-	urls := make([]*url.URL, len(args))
-	for i, s := range args {
-		u, err := url.Parse(s)
-		if err != nil {
-			panic(fmt.Sprintf("Wrong syntax for %q on index %d: %v", s, i, err))
-		}
-		urls[i] = u
-	}
-	return urls
-}
-
 func TestCrawl(t *testing.T) {
 	defer os.RemoveAll("_testdb")
 	db, urls, err := OpenDB("_testdb")
@@ -47,7 +26,7 @@ func TestCrawl(t *testing.T) {
 
 	err = Crawl(context.Background(), Config{
 		DB:    db,
-		Input: []*url.URL{mustParse("https://example.org/")},
+		Input: []*url.URL{common.ParseURL("https://example.org/")},
 		FilterURL: []func(*url.URL) string{func(u *url.URL) string {
 			if u.Host != "example.org" {
 				return "wrong host"
@@ -67,7 +46,7 @@ func TestCrawl(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test URLs was fetched
-	urls, err = db.URLsDB.Merge(mustParseSlice(
+	urls, err = db.URLsDB.Merge(common.ParseURLs(
 		"https://example.org/",
 		"https://example.org/dir/",
 		"https://example.org/dir/subdir/",
