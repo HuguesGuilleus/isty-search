@@ -44,9 +44,6 @@ type fetchContext struct {
 	// The max size of the html page.
 	maxLength int64
 
-	// Function to process all page.
-	process []func(*Page)
-
 	// The min and max CrawlDelay.
 	// The used value if determined by the robots.txt.
 	// Must: minCrawlDelay < maxCrawlDelay
@@ -196,10 +193,6 @@ func fetchOne(ctx *fetchContext, u *url.URL) {
 	// Save it
 	page := &Page{Html: htmlRoot}
 	ctx.db.save(u, page)
-
-	for _, process := range ctx.process {
-		process(page)
-	}
 
 	return
 }

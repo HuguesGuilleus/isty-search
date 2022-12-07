@@ -21,9 +21,6 @@ type Config struct {
 	FilterURL  []func(*url.URL) string
 	FilterPage []func(*htmlnode.Root) string
 
-	// Function to process all page.
-	Process []func(*Page)
-
 	// The max size of the html page.
 	// 15M for Google https://developers.google.com/search/docs/crawling-indexing/googlebot#how-googlebot-accesses-your-site
 	MaxLength int64
@@ -55,7 +52,6 @@ func Crawl(mainContext context.Context, config Config) error {
 		filterPage:    config.FilterPage,
 		roundTripper:  newlogRoundTripper(config.RoundTripper, config.LogOutput),
 		maxLength:     config.MaxLength,
-		process:       config.Process,
 		minCrawlDelay: config.MinCrawlDelay,
 		maxCrawlDelay: config.MaxCrawlDelay,
 	}
