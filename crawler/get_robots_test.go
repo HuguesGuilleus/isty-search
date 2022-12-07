@@ -3,7 +3,7 @@ package crawler
 import (
 	"github.com/HuguesGuilleus/isty-search/crawler/db"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
-	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt/test_data"
+	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt/datatest"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -17,12 +17,12 @@ func TestGetRobotstxt(t *testing.T) {
 	}
 
 	robots := *robotGetter(database, "https", "www.monde-diplomatique.fr", mapRoundTripper{
-		"https://www.monde-diplomatique.fr/robots.txt": robotstxtTestData.MondeDiplomatique,
+		"https://www.monde-diplomatique.fr/robots.txt": robotstxtdatatest.MondeDiplomatique,
 	})()
-	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique), robots)
+	assert.Equal(t, robotstxt.Parse(robotstxtdatatest.MondeDiplomatique), robots)
 
 	robotsSecond := *robotGetter(database, "https", "www.monde-diplomatique.fr", mapRoundTripper{})()
 	// The assert package make a difference between empty slice and nil slice,
 	// so we test only CrawlDelay (type int).
-	assert.Equal(t, robotstxt.Parse(robotstxtTestData.MondeDiplomatique).CrawlDelay, robotsSecond.CrawlDelay)
+	assert.Equal(t, robotstxt.Parse(robotstxtdatatest.MondeDiplomatique).CrawlDelay, robotsSecond.CrawlDelay)
 }
