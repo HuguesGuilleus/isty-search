@@ -8,6 +8,8 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler/db"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/search"
+	"github.com/HuguesGuilleus/isty-search/sloghandlers"
+	"golang.org/x/exp/slog"
 	"log"
 	"net/url"
 	"os"
@@ -117,7 +119,7 @@ func mainVocab() error {
 
 	pageCounter := search.PageCounter(0)
 	vocabCounter := make(search.VocabCounter)
-	if err := crawler.Process(db, vocabCounter, &pageCounter); err != nil {
+	if err := crawler.Process(db, sloghandlers.NewConsole(slog.InfoLevel), vocabCounter, &pageCounter); err != nil {
 		return err
 	}
 
@@ -133,7 +135,7 @@ func mainPageRank() error {
 	defer db.Close()
 
 	pageRank := search.NewPageRank()
-	if err := crawler.Process(db, &pageRank); err != nil {
+	if err := crawler.Process(db, sloghandlers.NewConsole(slog.InfoLevel), &pageRank); err != nil {
 		return err
 	}
 	pageRank.DevScore()

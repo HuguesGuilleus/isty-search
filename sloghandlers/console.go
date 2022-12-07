@@ -27,6 +27,10 @@ type console struct {
 }
 
 func (c *console) Begin(buff *bytes.Buffer, r slog.Record) bool {
+	if c.bar != "" {
+		buff.WriteString("\033[1G\033[K")
+	}
+
 	switch r.Message {
 	case "%":
 		i := 0
@@ -75,9 +79,6 @@ func (c *console) Begin(buff *bytes.Buffer, r slog.Record) bool {
 		return true
 
 	default:
-		if c.bar != "" {
-			buff.WriteString("\033[1G\033[K")
-		}
 		fmt.Fprintf(buff, "%s [%s]", r.Level, r.Message)
 		return false
 	}
