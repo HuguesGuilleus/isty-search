@@ -3,7 +3,7 @@ package crawler
 import (
 	"context"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
-	"io"
+	"golang.org/x/exp/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -33,9 +33,7 @@ type Config struct {
 	// Must: minCrawlDelay < maxCrawlDelay
 	MinCrawlDelay, MaxCrawlDelay time.Duration
 
-	// log Output.
-	// No log for nil value.
-	LogOutput io.Writer
+	LogHandler slog.Handler
 
 	// Use to fetch all HTTP ressource.
 	RoundTripper http.RoundTripper
@@ -50,7 +48,7 @@ func Crawl(mainContext context.Context, config Config) error {
 		maxGo:         config.MaxGo,
 		filterURL:     config.FilterURL,
 		filterPage:    config.FilterPage,
-		roundTripper:  newlogRoundTripper(config.RoundTripper, config.LogOutput),
+		roundTripper:  newlogRoundTripper(config.RoundTripper, config.LogHandler),
 		maxLength:     config.MaxLength,
 		minCrawlDelay: config.MinCrawlDelay,
 		maxCrawlDelay: config.MaxCrawlDelay,
@@ -61,7 +59,7 @@ func Crawl(mainContext context.Context, config Config) error {
 		return nil
 	}
 
-	fetchContext.loadURLS(config.Input)
+	fetchContext.addURLs(config.Input)
 
 	select {
 	case <-end:

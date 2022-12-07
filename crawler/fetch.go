@@ -117,10 +117,7 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 // Add urls in the URLsDB and in the ctx.host, then lauch if it's possible new crawl goroutine.
 func (ctx *fetchContext) addURLs(urls []*url.URL) {
 	urls, _ = ctx.db.URLsDB.Merge(urls)
-	ctx.loadURLS(urls)
-}
 
-func (ctx *fetchContext) loadURLS(urls []*url.URL) {
 	ctx.hostsMutex.Lock()
 	defer ctx.hostsMutex.Unlock()
 

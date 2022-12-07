@@ -1,27 +1,26 @@
 package crawler
 
 import (
-	"github.com/HuguesGuilleus/isty-search/common"
-	"io"
+	"github.com/HuguesGuilleus/isty-search/sloghandlers"
+	"golang.org/x/exp/slog"
 	"net/http"
-	"strconv"
-	"sync"
-	"time"
 )
 
 // A simple http.RoundTripper that log all request.
 type logRoundTripper struct {
-	logOutput    io.Writer
-	logMutex     sync.Mutex
+	logger       *slog.Logger
 	roundTripper http.RoundTripper
 }
 
-func newlogRoundTripper(roundTripper http.RoundTripper, logOutput io.Writer) http.RoundTripper {
+func newlogRoundTripper(roundTripper http.RoundTripper, logHandler slog.Handler) http.RoundTripper {
 	if roundTripper == nil {
 		roundTripper = http.DefaultTransport
 	}
+	if logHandler == nil {
+		logHandler = sloghandlers.NewNullHandler()
+	}
 	return &logRoundTripper{
-		logOutput:    logOutput,
+		logger:       slog.New(logHandler),
 		roundTripper: roundTripper,
 	}
 }
@@ -29,26 +28,10 @@ func newlogRoundTripper(roundTripper http.RoundTripper, logOutput io.Writer) htt
 func (r *logRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
 	response, err := r.roundTripper.RoundTrip(request)
 
-	if r.logOutput != nil {
-		buff := common.GetBuffer()
-		defer common.RecycleBuffer(buff)
-		buff.WriteString(time.Now().Format("2006-01-02 15:04:05 "))
-		if err == nil {
-			buff.WriteString("(")
-			buff.WriteString(strconv.Itoa(response.StatusCode))
-			buff.WriteString(") ")
-			buff.WriteString(request.URL.String())
-		} else {
-			buff.WriteString("(err) ")
-			buff.WriteString(request.URL.String())
-			buff.WriteString(" // ")
-			buff.WriteString(err.Error())
-		}
-		buff.WriteByte('\n')
-
-		r.logMutex.Lock()
-		defer r.logMutex.Unlock()
-		buff.WriteTo(r.logOutput)
+	if err == nil {
+		r.logger.Info("fetch.ok", "status", response.StatusCode, "url", request.URL.String())
+	} else {
+		r.logger.Info("fetch.err", "err", err.Error(), "url", request.URL.String())
 	}
 
 	return response, err

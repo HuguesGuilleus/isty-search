@@ -104,7 +104,7 @@ func mainCrawl() error {
 		MinCrawlDelay: time.Millisecond * 500,
 		MaxCrawlDelay: time.Second * 10,
 
-		LogOutput: os.Stdout,
+		LogHandler: sloghandlers.NewConsole(slog.InfoLevel),
 	}
 
 	ctx, ctxCancel := signal.NotifyContext(context.Background(), os.Interrupt)

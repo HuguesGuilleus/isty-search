@@ -7,12 +7,15 @@ import (
 	"github.com/HuguesGuilleus/isty-search/common"
 	database "github.com/HuguesGuilleus/isty-search/crawler/db"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
+	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slog"
 	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -24,6 +27,7 @@ func TestCrawl(t *testing.T) {
 	assert.Empty(t, urls)
 	defer db.Close()
 
+	records, logHandler := sloghandlers.NewHandlerRecords(slog.DebugLevel)
 	err = Crawl(context.Background(), Config{
 		DB:    db,
 		Input: []*url.URL{common.ParseURL("https://example.org/")},
@@ -42,8 +46,19 @@ func TestCrawl(t *testing.T) {
 		MaxLength:    15_000_000,
 		MaxGo:        1,
 		RoundTripper: datatestRoundTripper{},
+		LogHandler:   logHandler,
 	})
 	assert.NoError(t, err)
+
+	// Test log records
+	sort.Strings(*records)
+	assert.Equal(t, []string{
+		`INFO [fetch.ok] status=200 url=https://example.org/`,
+		`INFO [fetch.ok] status=200 url=https://example.org/dir/`,
+		`INFO [fetch.ok] status=200 url=https://example.org/dir/subdir/`,
+		`INFO [fetch.ok] status=200 url=https://example.org/es.html`,
+		`INFO [fetch.ok] status=200 url=https://example.org/robots.txt`,
+	}, *records)
 
 	// Test URLs was fetched
 	urls, err = db.URLsDB.Merge(common.ParseURLs(
