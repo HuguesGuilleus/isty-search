@@ -1,7 +1,7 @@
 package crawler
 
 import (
-	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"io"
 	"net/http"
 	"strconv"
@@ -30,8 +30,8 @@ func (r *logRoundTripper) RoundTrip(request *http.Request) (*http.Response, erro
 	response, err := r.roundTripper.RoundTrip(request)
 
 	if r.logOutput != nil {
-		buff := recycler.Get()
-		defer recycler.Recycle(buff)
+		buff := common.GetBuffer()
+		defer common.RecycleBuffer(buff)
 		buff.WriteString(time.Now().Format("2006-01-02 15:04:05 "))
 		if err == nil {
 			buff.WriteString("(")

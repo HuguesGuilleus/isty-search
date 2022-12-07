@@ -3,7 +3,7 @@ package crawler
 import (
 	"bytes"
 	"errors"
-	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"io"
 	"log"
@@ -165,7 +165,7 @@ func fetchOne(ctx *fetchContext, u *url.URL) {
 		ctx.addURLs([]*url.URL{redirect})
 		return
 	}
-	defer recycler.Recycle(body)
+	defer common.RecycleBuffer(body)
 
 	htmlRoot, err := htmlnode.Parse(body.Bytes())
 	if err != nil {
@@ -271,14 +271,14 @@ func fetchBytes(u *url.URL, roundTripper http.RoundTripper, maxRedirect int, max
 		return nil, nil, "http error:" + response.Status
 	}
 
-	buff := recycler.Get()
+	buff := common.GetBuffer()
 	if l := response.ContentLength; l > 0 && l < maxBody {
 		buff.Grow(int(l))
 	} else {
 		buff.Grow(int(maxBody))
 	}
 	if _, err := buff.ReadFrom(io.LimitReader(response.Body, maxBody)); err != nil {
-		recycler.Recycle(buff)
+		common.RecycleBuffer(buff)
 		return nil, nil, err.Error()
 	}
 

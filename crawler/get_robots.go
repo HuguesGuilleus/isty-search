@@ -1,7 +1,7 @@
 package crawler
 
 import (
-	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/db"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
 	"net/http"
@@ -46,7 +46,7 @@ func robotGet(database *DB, scheme, host string, roundTripper http.RoundTripper)
 	robots := robotstxt.DefaultRobots
 	if buff, _, _ := fetchBytes(&u, roundTripper, 5, 500_1024); buff != nil {
 		robots = robotstxt.Parse(buff.Bytes())
-		recycler.Recycle(buff)
+		common.RecycleBuffer(buff)
 	}
 
 	database.save(&u, &Page{Robots: &robots})

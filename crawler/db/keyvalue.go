@@ -6,7 +6,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -23,15 +23,15 @@ func OpenKeyValueDB[T any](base string) KeyValueDB[T] {
 }
 
 func (db *KeyValueDB[T]) Store(key Key, v *T) error {
-	buffGob := recycler.Get()
-	defer recycler.Recycle(buffGob)
+	buffGob := common.GetBuffer()
+	defer common.RecycleBuffer(buffGob)
 
 	if err := gob.NewEncoder(buffGob).Encode(v); err != nil {
 		return fmt.Errorf("KeyValueDB.Store(%x): Gob encode: %w", key, err)
 	}
 
-	buffGzip := recycler.Get()
-	defer recycler.Recycle(buffGzip)
+	buffGzip := common.GetBuffer()
+	defer common.RecycleBuffer(buffGzip)
 
 	gzipWriter := gzip.NewWriter(buffGzip)
 	if _, err := buffGob.WriteTo(gzipWriter); err != nil {
@@ -59,8 +59,8 @@ func (db *KeyValueDB[T]) Get(key Key) (*T, error) {
 		return nil, fmt.Errorf("KeyValueDB.Get(%s): %w", key, err)
 	}
 
-	buff := recycler.Get()
-	defer recycler.Recycle(buff)
+	buff := common.GetBuffer()
+	defer common.RecycleBuffer(buff)
 
 	gzipReader, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {

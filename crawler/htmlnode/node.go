@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/HuguesGuilleus/isty-search/bytesrecycler"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"net/url"
@@ -117,8 +117,8 @@ func convertOneNode(srcNode *html.Node) Node {
 	if newNode.Namespace == "" &&
 		newNode.TagName == atom.Script &&
 		newNode.Attributes["type"] == mimeLdJSON {
-		buff := recycler.Get()
-		defer recycler.Recycle(buff)
+		buff := common.GetBuffer()
+		defer common.RecycleBuffer(buff)
 
 		if err := json.Compact(buff, []byte(newNode.Text)); err == nil {
 			newNode.Text = buff.String()
