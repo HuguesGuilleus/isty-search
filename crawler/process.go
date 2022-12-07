@@ -8,13 +8,8 @@ import (
 	"os"
 )
 
-type Processor interface {
-	// Process a HTML page with no nil Html field.
-	// Is not executed simultanly
-	Process(*Page)
-}
-
-func Process(database *DB, processList ...Processor) error {
+// Call each Page with a HTML from the database call is not concurently.
+func Process(database *DB, processList ...interface{ Process(*Page) }) error {
 	bar := progessBar{
 		buff: recycler.Get(),
 		long: 80,
