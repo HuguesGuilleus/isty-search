@@ -78,17 +78,16 @@ func (ctx *fetchContext) Work() {
 	}
 }
 
-// Get a host that will be crawled.
+// Get a host that will be crawled, and free last host if not nil.
 func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 	ctx.hostsMutex.Lock()
 	defer ctx.hostsMutex.Unlock()
 
 	if lastHost != nil {
 		key := createKey(lastHost.scheme, lastHost.host)
+		ctx.hosts[key].fetching = false
 		if len(ctx.hosts[key].urls) == 0 {
 			delete(ctx.hosts, key)
-		} else {
-			ctx.hosts[key].fetching = false
 		}
 	}
 
@@ -102,7 +101,6 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 			h.urls = nil
 			return &returnedHost
 		}
-
 	}
 
 	if !fetching {
