@@ -2,8 +2,10 @@ package crawldatabase
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/stretchr/testify/assert"
+	"strconv"
 	"testing"
 )
 
@@ -19,10 +21,10 @@ func TestKeyPath(t *testing.T) {
 	)
 }
 
-func TestWriteMetaValueSimple(t *testing.T) {
+func TestWriteMetavalueSimple(t *testing.T) {
 	fn := func(t *testing.T, byteType byte) {
 		buff := bytes.Buffer{}
-		err := writeMetaValue(NewKeyURL(googleHowURL), metavalue{Type: byteType}, &buff)
+		err := writeMetavalue(NewKeyURL(googleHowURL), metavalue{Type: byteType}, &buff)
 		assert.NoError(t, err)
 
 		expected := [72]byte{
@@ -39,9 +41,9 @@ func TestWriteMetaValueSimple(t *testing.T) {
 	t.Run("known", func(t *testing.T) { fn(t, TypeKnow) })
 }
 
-func TestWriteMetaValueRedirect(t *testing.T) {
+func TestWriteMetavalueRedirect(t *testing.T) {
 	buff := bytes.Buffer{}
-	err := writeMetaValue(NewKeyURL(googleHowURL), metavalue{
+	err := writeMetavalue(NewKeyURL(googleHowURL), metavalue{
 		Type: TypeRedirect,
 		Time: 1671022548,
 		Hash: NewKeyURL(googleRootURL),
@@ -61,9 +63,9 @@ func TestWriteMetaValueRedirect(t *testing.T) {
 	assert.Equal(t, expected[:], buff.Bytes())
 }
 
-func TestWriteMetaValueFile(t *testing.T) {
+func TestWriteMetavalueFile(t *testing.T) {
 	buff := bytes.Buffer{}
-	err := writeMetaValue(NewKeyURL(googleHowURL), metavalue{
+	err := writeMetavalue(NewKeyURL(googleHowURL), metavalue{
 		Type:     TypeFileHTML,
 		Time:     1671022548,
 		Position: 0x1122334455667788,
@@ -91,12 +93,11 @@ func TestWriteMetaValueFile(t *testing.T) {
 	assert.Equal(t, expected[:], buff.Bytes())
 }
 
-func TestWriteMetaValueError(t *testing.T) {
+func TestWriteMetavalueError(t *testing.T) {
 	buff := bytes.Buffer{}
-	err := writeMetaValue(NewKeyURL(googleHowURL), metavalue{
+	err := writeMetavalue(NewKeyURL(googleHowURL), metavalue{
 		Type: TypeErrorNetwork,
 		Time: 1671022548,
-		Hash: NewKeyURL(googleRootURL),
 	}, &buff)
 	assert.NoError(t, err)
 
@@ -110,4 +111,50 @@ func TestWriteMetaValueError(t *testing.T) {
 		// Zero remain
 	}
 	assert.Equal(t, expected[:], buff.Bytes())
+}
+
+func TestLoadMetavalue(t *testing.T) {
+	hash := sha256.Sum256([]byte("hello world"))
+	for i := 0; i < 12; i++ {
+		hash[i] = 0
+	}
+
+	metavalueOrigin := []metavalue{
+		metavalue{Type: TypeNothing},
+		metavalue{Type: TypeKnow},
+		metavalue{
+			Type: TypeRedirect,
+			Time: 1671022548,
+			Hash: NewKeyURL(googleRootURL),
+		},
+		metavalue{
+			Type:     TypeFileHTML,
+			Time:     1671022548,
+			Position: 0x1122334455667788,
+			Length:   0x11223344,
+			Hash:     hash,
+		},
+		metavalue{
+			Type: TypeErrorNetwork,
+			Time: 1671022548,
+		},
+	}
+
+	expectedMetavalue := make(map[Key]metavalue, len(metavalueOrigin))
+	buff := bytes.Buffer{}
+	for i, m := range metavalueOrigin {
+		key := NewKeyString("https://www.google.com/" + strconv.Itoa(i))
+		t.Log(i, key)
+
+		err := writeMetavalue(key, m, &buff)
+		assert.NoError(t, err)
+
+		expectedMetavalue[key] = m
+	}
+
+	receivedMap := loadMetavalue(buff.Bytes())
+	assert.Equal(t, len(expectedMetavalue), len(receivedMap))
+	for key, meta := range expectedMetavalue {
+		assert.Equal(t, meta, receivedMap[key], key)
+	}
 }

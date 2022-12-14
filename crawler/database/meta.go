@@ -22,7 +22,7 @@ const (
 
 const (
 	// The length in byte of the key and the meta value .
-	KeyMetaLen = 72
+	keyMetavalueLen = 72
 	// A bits mask to get the time.
 	timeMask = 1<<56 - 1
 )
@@ -36,8 +36,8 @@ type metavalue struct {
 	Length   int32
 }
 
-func writeMetaValue(key Key, meta metavalue, w io.Writer) error {
-	bytes := [72]byte{}
+func writeMetavalue(key Key, meta metavalue, w io.Writer) error {
+	bytes := [keyMetavalueLen]byte{}
 	copy(bytes[:], key[:])
 
 	switch meta.Type {
@@ -49,7 +49,7 @@ func writeMetaValue(key Key, meta metavalue, w io.Writer) error {
 		bytes[KeyLen] = TypeRedirect
 		copy(bytes[KeyLen+8:], meta.Hash[:])
 	default:
-		if meta.Type < TypeError { // a file
+		if meta.Type < TypeError { // file type
 			bytes[40] = byte(meta.Position >> 56)
 			bytes[41] = byte(meta.Position >> 48)
 			bytes[42] = byte(meta.Position >> 40)
@@ -79,4 +79,54 @@ func writeMetaValue(key Key, meta metavalue, w io.Writer) error {
 
 	_, err := w.Write(bytes[:])
 	return err
+}
+
+// Load many meta and keys
+func loadMetavalue(bytes []byte) map[Key]metavalue {
+	mapMeta := make(map[Key]metavalue, len(bytes)/keyMetavalueLen)
+
+	for i := 0; i < len(bytes); i += keyMetavalueLen {
+		key := Key{}
+		copy(key[:], bytes[i:])
+
+		meta := metavalue{}
+
+		meta.Time = 0 |
+			int64(bytes[i+KeyLen+1])<<48 |
+			int64(bytes[i+KeyLen+2])<<40 |
+			int64(bytes[i+KeyLen+3])<<32 |
+			int64(bytes[i+KeyLen+4])<<24 |
+			int64(bytes[i+KeyLen+5])<<16 |
+			int64(bytes[i+KeyLen+6])<<8 |
+			int64(bytes[i+KeyLen+7])<<0
+
+		switch meta.Type = bytes[i+KeyLen]; meta.Type {
+		case TypeNothing, TypeKnow:
+			meta.Time = 0
+		case TypeRedirect:
+			copy(meta.Hash[:], bytes[i+KeyLen+8:])
+		default:
+			if meta.Type < TypeError { // It's a file
+				meta.Position = 0 |
+					int64(bytes[i+KeyLen+8])<<56 |
+					int64(bytes[i+KeyLen+9])<<48 |
+					int64(bytes[i+KeyLen+10])<<40 |
+					int64(bytes[i+KeyLen+11])<<32 |
+					int64(bytes[i+KeyLen+12])<<24 |
+					int64(bytes[i+KeyLen+13])<<16 |
+					int64(bytes[i+KeyLen+14])<<8 |
+					int64(bytes[i+KeyLen+15])<<0
+				meta.Length = 0 |
+					int32(bytes[i+KeyLen+16])<<24 |
+					int32(bytes[i+KeyLen+17])<<16 |
+					int32(bytes[i+KeyLen+18])<<8 |
+					int32(bytes[i+KeyLen+19])<<0
+				copy(meta.Hash[12:], bytes[i+KeyLen+20:])
+			}
+		}
+
+		mapMeta[key] = meta
+	}
+
+	return mapMeta
 }
