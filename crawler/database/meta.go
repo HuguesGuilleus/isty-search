@@ -101,7 +101,10 @@ func loadMetavalue(bytes []byte) map[Key]metavalue {
 			int64(bytes[i+KeyLen+7])<<0
 
 		switch meta.Type = bytes[i+KeyLen]; meta.Type {
-		case TypeNothing, TypeKnow:
+		case TypeNothing:
+			delete(mapMeta, key)
+			continue
+		case TypeKnow:
 			meta.Time = 0
 		case TypeRedirect:
 			copy(meta.Hash[:], bytes[i+KeyLen+8:])

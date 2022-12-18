@@ -151,6 +151,7 @@ func TestLoadMetavalue(t *testing.T) {
 
 		expectedMetavalue[key] = m
 	}
+	delete(expectedMetavalue, NewKeyString("https://www.google.com/0"))
 
 	receivedMap := loadMetavalue(buff.Bytes())
 	assert.Equal(t, len(expectedMetavalue), len(receivedMap))
