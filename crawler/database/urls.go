@@ -8,7 +8,7 @@ import (
 
 // Load URLS from the data (url encoded as string sepatared by \n).
 // Use the logger as warn when url parsing error cooure.
-// Do not return URL with not accepted type in teh metaMap.
+// Do not return URL with not accepted type in the mapMeta.
 func loadURLs(logger *slog.Logger, data []byte, mapMeta map[Key]metavalue, acceptedTypes []byte) []*url.URL {
 	refusedTypes := [256]bool{}
 	for i := range refusedTypes {

@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"net/url"
+	"sort"
 )
 
 // Parse one URL, panic if error.
@@ -27,4 +28,14 @@ func ParseURLs(args ...string) []*url.URL {
 		urls[i] = u
 	}
 	return urls
+}
+
+// Transform all url as string and sort it.
+func URL2String(urls []*url.URL) []string {
+	s := make([]string, len(urls))
+	for i, u := range urls {
+		s[i] = u.String()
+	}
+	sort.Strings(s)
+	return s
 }
