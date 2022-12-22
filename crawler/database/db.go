@@ -41,6 +41,14 @@ type Database[T any] interface {
 	// Is t is a file type, it return an error, and do not modify the DB.
 	SetSimple(key Key, t byte) error
 
+	// Return all redictions to valid file.
+	// If r1 -> r2 -> r3 -> p, the map contain:
+	//   - m[r1] = p
+	//   - m[r2] = p
+	//   - m[r3] = p
+	// The redirection chain is limited to 10.
+	Redirections() map[Key]Key
+
 	// Close the database.
 	// After close, call of database method can infinity block.
 	Close() error
@@ -349,6 +357,34 @@ func (db *database[_]) SetRedirect(key, destination Key) error {
 	db.mapMeta[key] = meta
 
 	return nil
+}
+
+func (db *database[_]) Redirections() map[Key]Key {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	m := make(map[Key]Key)
+	for key, meta := range db.mapMeta {
+		if meta.Type != TypeRedirect {
+			continue
+		}
+		dest := meta.Hash
+		for i := 0; i < 10; i++ {
+			newMeta := db.mapMeta[dest]
+			t := newMeta.Type
+			switch {
+			case t == TypeRedirect:
+				dest = newMeta.Hash
+			case TypeFile <= t && t < TypeError:
+				m[key] = dest
+				break
+			default:
+				break
+			}
+		}
+	}
+
+	return m
 }
 
 func (db *database[_]) setmeta(key Key, meta metavalue) error {

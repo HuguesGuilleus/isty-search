@@ -124,6 +124,17 @@ func TestDB(t *testing.T) {
 	meta.Time = 0
 	assert.Equal(t, metavalue{Type: TypeRedirect, Hash: kt}, meta)
 
+	// Redirections
+	koo := NewKeyString("origin-origin")
+	assert.NoError(t, db.SetValue(kt, &http.Cookie{}, TypeFile))
+	assert.NoError(t, db.SetRedirect(koo, ko))
+	assert.NoError(t, db.SetRedirect(NewKeyString("2null"), NewKeyString("null")))
+	// the chain koo -> ko -> kt
+	assert.Equal(t, map[Key]Key{
+		koo: kt,
+		ko:  kt,
+	}, db.Redirections())
+
 	// Final close
 	assert.NoError(t, db.Close())
 
