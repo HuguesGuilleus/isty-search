@@ -34,6 +34,9 @@ type Database[T any] interface {
 	// t must be a type of a regular file.
 	SetValue(key Key, value *T, t byte) error
 
+	// Set the redirection.
+	SetRedirect(key, destination Key) error
+
 	// Set in the DB a simple type: nothing, known or error.
 	// Is t is a file type, it return an error, and do not modify the DB.
 	SetSimple(key Key, t byte) error
@@ -327,6 +330,23 @@ func (db *database[_]) SetSimple(key Key, t byte) error {
 		}
 		db.mapMeta[key] = meta
 	}
+
+	return nil
+}
+
+func (db *database[_]) SetRedirect(key, destination Key) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	meta := metavalue{
+		Type: TypeRedirect,
+		Time: time.Now().Unix(),
+		Hash: destination,
+	}
+	if err := db.setmeta(key, meta); err != nil {
+		return fmt.Errorf("SetRedirect(key=%s) %w", key, err)
+	}
+	db.mapMeta[key] = meta
 
 	return nil
 }

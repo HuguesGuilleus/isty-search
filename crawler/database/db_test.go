@@ -84,6 +84,15 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, db.SetSimple(kd, TypeNothing))
 	assert.Zero(t, db.(*database[http.Cookie]).mapMeta[kd])
 
+	// Redirection
+	ko := NewKeyString("origin")
+	kt := NewKeyString("target")
+	assert.NoError(t, db.SetRedirect(ko, kt))
+	meta = db.(*database[http.Cookie]).mapMeta[ko]
+	assert.NotZero(t, meta.Time)
+	meta.Time = 0
+	assert.Equal(t, metavalue{Type: TypeRedirect, Hash: kt}, meta)
+
 	// Reopen
 	assert.NoError(t, db.Close())
 	urls, db, err = OpenWithKnow[http.Cookie](slog.New(handler), "__db")
@@ -108,6 +117,12 @@ func TestDB(t *testing.T) {
 	assert.NotZero(t, meta.Time)
 	meta.Time = 0
 	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
+
+	// Check redirect
+	meta = db.(*database[http.Cookie]).mapMeta[ko]
+	assert.NotZero(t, meta.Time)
+	meta.Time = 0
+	assert.Equal(t, metavalue{Type: TypeRedirect, Hash: kt}, meta)
 
 	// Final close
 	assert.NoError(t, db.Close())
