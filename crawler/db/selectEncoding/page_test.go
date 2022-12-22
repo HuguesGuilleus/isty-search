@@ -61,15 +61,28 @@ var (
 		{"zlib",
 			func(w io.Writer) io.WriteCloser { return zlib.NewWriter(w) },
 			zlib.NewReader},
+		{"zS__",
+			func(w io.Writer) io.WriteCloser { return newWriterPanic(zlib.NewWriterLevel(w, zlib.BestSpeed)) },
+			zlib.NewReader},
+		{"zC__",
+			func(w io.Writer) io.WriteCloser { return newWriterPanic(zlib.NewWriterLevel(w, zlib.BestCompression)) },
+			zlib.NewReader},
 	}
 )
+
+func newWriterPanic(w io.WriteCloser, err error) io.WriteCloser {
+	if err != nil {
+		panic(err)
+	}
+	return w
+}
 
 func TestSaver(t *testing.T) {
 	format := "%-10s: %10d B"
 
 	// Base HTML
 	for _, compressor := range compressorSlice {
-		data := testEncoder(nil, func(_ any) ([]byte, error) { return testPageSourceBytes, nil }, compressor.compressor)
+		data := testEncoder(nil, fakeEncoder, compressor.compressor)
 		t.Logf(format, "html+"+compressor.name, len(data))
 	}
 	t.Log()
@@ -91,6 +104,27 @@ func TestSaver(t *testing.T) {
 			t.Logf(format, name, len(data))
 		}
 		t.Log()
+	}
+}
+
+func BenchmarkEncode(b *testing.B) {
+	for _, compressor := range compressorSlice {
+		b.Run("html+"+compressor.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				testEncoder(nil, fakeEncoder, compressor.compressor)
+			}
+		})
+	}
+
+	for _, encoder := range encoderSlice {
+		for _, compressor := range compressorSlice {
+			name := encoder.name + "+" + compressor.name
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					testEncoder(testPageSource, encoder.encode, compressor.compressor)
+				}
+			})
+		}
 	}
 }
 
