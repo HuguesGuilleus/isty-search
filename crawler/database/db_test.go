@@ -135,7 +135,11 @@ func TestDB(t *testing.T) {
 		ko:  kt,
 	}, db.Redirections())
 
-	// Final close
+	// Reopen without urls.
+	assert.NoError(t, db.Close())
+	urls, db, err = Open[http.Cookie](slog.New(handler), "__db")
+	assert.Nil(t, urls)
+	assert.NoError(t, err)
 	assert.NoError(t, db.Close())
 
 	// No log

@@ -89,6 +89,11 @@ func OpenWithKnow[T any](logger *slog.Logger, base string) ([]*url.URL, Database
 	return open[T](logger, base, []byte{TypeKnow})
 }
 
+// Open the database but return no url.
+func Open[T any](logger *slog.Logger, base string) ([]*url.URL, Database[T], error) {
+	return open[T](logger, base, nil)
+}
+
 func open[T any](logger *slog.Logger, base string, acceptedTypes []byte) ([]*url.URL, Database[T], error) {
 	base = filepath.Clean(base)
 	if err := os.MkdirAll(base, 0o775); err != nil {
@@ -97,7 +102,10 @@ func open[T any](logger *slog.Logger, base string, acceptedTypes []byte) ([]*url
 	}
 
 	mapMeta := loadElasticMetavalue(readFile(logger, base, filenameMeta))
-	urls := loadURLs(logger, readFile(logger, base, filenameURLS), mapMeta, acceptedTypes)
+	urls := []*url.URL(nil)
+	if len(acceptedTypes) > 0 {
+		urls = loadURLs(logger, readFile(logger, base, filenameURLS), mapMeta, acceptedTypes)
+	}
 
 	metaFile, err := openFile(logger, base, filenameMeta, os.O_WRONLY|os.O_APPEND)
 	if err != nil {
