@@ -1,8 +1,13 @@
 package crawldatabase
 
 import (
+	"bytes"
+	"compress/zlib"
+	"crypto/sha256"
+	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"golang.org/x/exp/slog"
 	"io/fs"
 	"net/url"
@@ -12,18 +17,32 @@ import (
 	"time"
 )
 
+// A database object to store value and matadata (time) about a value.
+// All method other than Close can be used concurently.
 type Database[T any] interface {
 	// Add unknwon url.
 	// If the URL is known, is deleted of urls, else is saved is DB files.
 	// Error are logged and returned.
 	AddURL(map[Key]*url.URL) error
 
+	// Get the value from the DB.
+	// If the value if not a file, return NotFile.
+	// If the value do not exist, return NotExist.
+	GetValue(key Key) (*T, error)
+
+	// Set the value to the DB, overwrite previsou value.
+	// t must be a type of a regular file.
+	SetValue(key Key, value *T, t byte) error
+
 	// Close the database.
 	// After close, call of database method can infinity block.
 	Close() error
 }
 
-var NotExist = errors.New("Not exist")
+var (
+	NotExist = errors.New("Not exist")
+	NotFile  = errors.New("This value is not a file")
+)
 
 const (
 	filenameURLS = "urls.txt"
@@ -45,6 +64,9 @@ type database[T any] struct {
 	metaFile *os.File
 	urlsFile *os.File
 	dataFile *os.File
+
+	// The position of write in the dataFile, so at end ogf the file.
+	position int64
 }
 
 // Open the DB, and return all know URL.
@@ -62,17 +84,22 @@ func open[T any](logger *slog.Logger, base string, acceptedTypes []byte) ([]*url
 	mapMeta := loadElasticMetavalue(readFile(logger, base, filenameMeta))
 	urls := loadURLs(logger, readFile(logger, base, filenameURLS), mapMeta, acceptedTypes)
 
-	metaFile, err := openFile(logger, base, filenameMeta, os.O_WRONLY)
+	metaFile, err := openFile(logger, base, filenameMeta, os.O_WRONLY|os.O_APPEND)
 	if err != nil {
 		return nil, nil, err
 	}
-	urlsFile, err := openFile(logger, base, filenameURLS, os.O_WRONLY)
+	urlsFile, err := openFile(logger, base, filenameURLS, os.O_WRONLY|os.O_APPEND)
 	if err != nil {
 		return nil, nil, err
 	}
 	dataFile, err := openFile(logger, base, filenameData, os.O_RDWR)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	position, err := dataFile.Seek(0, os.SEEK_END)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Open DB, file %q: %w", filepath.Join(base, filenameData), err)
 	}
 
 	logger.Info("db.open", "base", base)
@@ -93,13 +120,15 @@ func open[T any](logger *slog.Logger, base string, acceptedTypes []byte) ([]*url
 		metaFile:    metaFile,
 		urlsFile:    urlsFile,
 		dataFile:    dataFile,
+		position:    position,
 	}, nil
 }
 
 // Open the file "base/name" and log error if occure.
+// It add the flag create.
 func openFile(logger *slog.Logger, base, name string, flag int) (f *os.File, err error) {
 	path := filepath.Join(base, name)
-	f, err = os.OpenFile(path, flag|os.O_APPEND|os.O_CREATE, 0o664)
+	f, err = os.OpenFile(path, flag|os.O_CREATE, 0o664)
 
 	if err != nil {
 		logger.Error("db.open", err, "file", path)
@@ -170,4 +199,109 @@ func (db *database[_]) AddURL(urls map[Key]*url.URL) error {
 	}
 
 	return nil
+}
+
+func (db *database[T]) GetValue(key Key) (*T, error) {
+	meta := db.getMetavalue(key)
+	if meta.Type == TypeNothing {
+		return nil, NotExist
+	} else if meta.Type < TypeFile || meta.Type >= TypeError {
+		return nil, NotFile
+	}
+
+	// Read the data chunck
+	data := make([]byte, int(meta.Length))
+	_, err := db.dataFile.ReadAt(data, meta.Position)
+	if err != nil {
+		db.logerror("readChunck", key, err)
+		return nil, fmt.Errorf("DB.GetValue(key=%s) %w", key, err)
+	}
+
+	// Decompress it
+	zlibBuffer := common.GetBuffer()
+	defer common.RecycleBuffer(zlibBuffer)
+	if zlibReader, err := zlib.NewReader(bytes.NewReader(data)); err != nil {
+		db.logerror("zlib.decode.open", key, err)
+		return nil, fmt.Errorf("DB.GetValue(key=%s) %w", key, err)
+	} else if _, err = zlibBuffer.ReadFrom(zlibReader); err != nil {
+		db.logerror("zlib.decode.read", key, err)
+		return nil, fmt.Errorf("DB.GetValue(key=%s) %w", key, err)
+	} else if err = zlibReader.Close(); err != nil {
+		db.logerror("zlib.decode.close", key, err)
+		return nil, fmt.Errorf("DB.GetValue(key=%s) %w", key, err)
+	}
+
+	// Check hash
+	if hash := sha256.Sum256(zlibBuffer.Bytes()); !bytes.Equal(hash[12:], meta.Hash[12:]) {
+		db.logerror("chechHash", key, nil)
+		return nil, fmt.Errorf("DB.GetValue(key=%s) Wring hash", key)
+	}
+
+	// Decode
+	value := new(T)
+	if err := gob.NewDecoder(zlibBuffer).Decode(value); err != nil {
+		db.logerror("gob.decode", key, err)
+		return nil, fmt.Errorf("DB.GetValue(key=%s) %w", key, err)
+	}
+
+	return value, nil
+}
+
+func (db *database[_]) getMetavalue(key Key) metavalue {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+	return db.mapMeta[key]
+}
+
+func (db *database[T]) SetValue(key Key, value *T, t byte) error {
+	if t < TypeFile || t >= TypeError {
+		return fmt.Errorf("DB.SetValue(key=%s): The type %d is not for a file", key, t)
+	} else if value == nil {
+		return fmt.Errorf("DB.SetValue(key=%s): the value is nil", key)
+	}
+
+	gobBuffer := common.GetBuffer()
+	zlibBuffer := common.GetBuffer()
+	defer common.RecycleBuffer(gobBuffer)
+	defer common.RecycleBuffer(zlibBuffer)
+
+	if err := gob.NewEncoder(gobBuffer).Encode(value); err != nil {
+		db.logerror("encode", key, err)
+		return fmt.Errorf("DB.SetValue(key=%s) encode value fail: %w", key, err)
+	}
+	hash := sha256.Sum256(gobBuffer.Bytes())
+	zlibWriter := zlib.NewWriter(zlibBuffer)
+	gobBuffer.WriteTo(zlibWriter)
+	zlibWriter.Close()
+
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	meta := metavalue{
+		Type:     t,
+		Time:     time.Now().Unix(),
+		Hash:     hash,
+		Position: db.position,
+		Length:   int32(zlibBuffer.Len()),
+	}
+
+	n, err := db.dataFile.Write(zlibBuffer.Bytes())
+	if err != nil {
+		db.logerror("write.data", key, err)
+		return fmt.Errorf("DB.SetValue(key=%s) write data: %w", key, err)
+	}
+	db.position += int64(n)
+
+	if err := writeElasticMetavalue(key, meta, db.metaFile); err != nil {
+		db.logerror("write.meta", key, err)
+		return fmt.Errorf("DB.SetValue(key=%s) write meta: %w", key, err)
+	}
+	db.mapMeta[key] = meta
+
+	return nil
+}
+
+// The log error.
+func (db *database[_]) logerror(op string, key Key, err error) {
+	db.logger.Error("db.error", err, "op", op, "key", key.String())
 }
