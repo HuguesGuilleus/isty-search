@@ -51,6 +51,8 @@ func (stats Statistics) Log(logger *slog.Logger) {
 	logger.LogAttrs(slog.InfoLevel, "db.stats.total",
 		slog.Group("count",
 			slog.Int("all", stats.Total),
+			slog.Int("know", stats.Count[TypeKnow]),
+			slog.Int("redirect", stats.Count[TypeRedirect]),
 			slog.Int("file", stats.TotalFile),
 			slog.Int("error", stats.TotalError),
 		),

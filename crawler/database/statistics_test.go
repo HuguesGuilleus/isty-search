@@ -86,13 +86,13 @@ func TestStatisticsLog(t *testing.T) {
 	records, handler := sloghandlers.NewHandlerRecords(slog.DebugLevel)
 	stats.Log(slog.New(handler))
 	assert.Equal(t, []string{
-		"INFO [db.stats.total] count.all=11 count.file=5 count.error=4 size=20",
+		"INFO [db.stats.total] count.all=11 count.know=1 count.redirect=1 count.file=5 count.error=4 size=20",
 	}, *records)
 
 	records, handler = sloghandlers.NewHandlerRecords(slog.DebugLevel)
 	stats.LogAll(slog.New(handler))
 	assert.Equal(t, []string{
-		"INFO [db.stats.total] count.all=11 count.file=5 count.error=4 size=20",
+		"INFO [db.stats.total] count.all=11 count.know=1 count.redirect=1 count.file=5 count.error=4 size=20",
 		"INFO [db.stats.count] count=1 percent=9 type=know",
 		"INFO [db.stats.count] count=1 percent=9 type=redirect",
 		"INFO [db.stats.count] count=1 percent=9 type=fileRobots",
