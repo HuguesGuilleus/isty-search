@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type Database[T any] interface {
@@ -32,6 +33,9 @@ const (
 
 type database[T any] struct {
 	logger *slog.Logger
+
+	// A ticker to log DB stats at regular interval.
+	statsTicker *time.Ticker
 
 	// The base path.
 	base string
@@ -72,15 +76,23 @@ func open[T any](logger *slog.Logger, base string, acceptedTypes []byte) ([]*url
 	}
 
 	logger.Info("db.open", "base", base)
-	getStatistics(mapMeta).Log(logger)
+	statsTicker := time.NewTicker(time.Second * 30)
+
+	go func() {
+		getStatistics(mapMeta).Log(logger)
+		for range statsTicker.C {
+			getStatistics(mapMeta).Log(logger)
+		}
+	}()
 
 	return urls, &database[T]{
-		logger:   logger,
-		base:     base,
-		mapMeta:  mapMeta,
-		metaFile: metaFile,
-		urlsFile: urlsFile,
-		dataFile: dataFile,
+		logger:      logger,
+		statsTicker: statsTicker,
+		base:        base,
+		mapMeta:     mapMeta,
+		metaFile:    metaFile,
+		urlsFile:    urlsFile,
+		dataFile:    dataFile,
 	}, nil
 }
 
@@ -108,6 +120,7 @@ func readFile(logger *slog.Logger, base, name string) []byte {
 
 func (db *database[_]) Close() error {
 	db.mutex.Lock() // Keep locked to block the database
+	db.statsTicker.Stop()
 
 	errs := []error{
 		db.metaFile.Close(),
