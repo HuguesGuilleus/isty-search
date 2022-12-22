@@ -67,6 +67,23 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &expectedValue, v)
 
+	// Set simple
+	ks := NewKeyString("simple")
+	assert.Error(t, db.SetSimple(ks, TypeFileRSS))
+	assert.NoError(t, db.SetSimple(ks, TypeErrorParsing))
+
+	meta := db.(*database[http.Cookie]).mapMeta[ks]
+	assert.NotZero(t, meta.Time)
+	meta.Time = 0
+	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
+
+	// Remove key
+	kd := NewKeyString("deleted")
+	assert.NoError(t, db.SetSimple(kd, TypeErrorParsing))
+	assert.NotZero(t, db.(*database[http.Cookie]).mapMeta[kd])
+	assert.NoError(t, db.SetSimple(kd, TypeNothing))
+	assert.Zero(t, db.(*database[http.Cookie]).mapMeta[kd])
+
 	// Reopen
 	assert.NoError(t, db.Close())
 	urls, db, err = OpenWithKnow[http.Cookie](slog.New(handler), "__db")
@@ -85,6 +102,14 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &expectedValue, v)
 
+	// Check simple
+	assert.Zero(t, db.(*database[http.Cookie]).mapMeta[kd])
+	meta = db.(*database[http.Cookie]).mapMeta[ks]
+	assert.NotZero(t, meta.Time)
+	meta.Time = 0
+	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
+
+	// Final close
 	assert.NoError(t, db.Close())
 
 	// No log

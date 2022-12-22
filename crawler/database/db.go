@@ -30,9 +30,13 @@ type Database[T any] interface {
 	// If the value do not exist, return NotExist.
 	GetValue(key Key) (*T, error)
 
-	// Set the value to the DB, overwrite previsou value.
+	// Set the value to the DB, overwrite previous value.
 	// t must be a type of a regular file.
 	SetValue(key Key, value *T, t byte) error
+
+	// Set in the DB a simple type: nothing, known or error.
+	// Is t is a file type, it return an error, and do not modify the DB.
+	SetSimple(key Key, t byte) error
 
 	// Close the database.
 	// After close, call of database method can infinity block.
@@ -292,12 +296,46 @@ func (db *database[T]) SetValue(key Key, value *T, t byte) error {
 	}
 	db.position += int64(n)
 
-	if err := writeElasticMetavalue(key, meta, db.metaFile); err != nil {
-		db.logerror("write.meta", key, err)
-		return fmt.Errorf("DB.SetValue(key=%s) write meta: %w", key, err)
+	if err := db.setmeta(key, meta); err != nil {
+		return fmt.Errorf("DB.SetValue(key=%s) %w", key, err)
 	}
 	db.mapMeta[key] = meta
 
+	return nil
+}
+
+func (db *database[_]) SetSimple(key Key, t byte) error {
+	if TypeFile <= t && t < TypeError {
+		return fmt.Errorf("Db.SetSimple(key=%s, type=%d) use forbiden type file", key, t)
+	}
+
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	if t == TypeNothing {
+		if err := db.setmeta(key, metavalue{Type: TypeNothing}); err != nil {
+			return fmt.Errorf("db.SetSimple(key=%s) %w", key, err)
+		}
+		delete(db.mapMeta, key)
+	} else {
+		meta := metavalue{
+			Type: t,
+			Time: time.Now().Unix(),
+		}
+		if err := db.setmeta(key, meta); err != nil {
+			return fmt.Errorf("db.SetSimple(key=%s) %w", key, err)
+		}
+		db.mapMeta[key] = meta
+	}
+
+	return nil
+}
+
+func (db *database[_]) setmeta(key Key, meta metavalue) error {
+	if err := writeElasticMetavalue(key, meta, db.metaFile); err != nil {
+		db.logerror("write.meta", key, err)
+		return fmt.Errorf("write meta: %w", err)
+	}
 	return nil
 }
 
