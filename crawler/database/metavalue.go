@@ -26,6 +26,11 @@ const (
 // The maximum length of the key and the metavalue.
 const keyMetavalueLen = 72
 
+type keymetavalue struct {
+	key  Key
+	meta metavalue
+}
+
 // The meta value, different type: nothing | known | redirect | file | error
 type metavalue struct {
 	Type     byte

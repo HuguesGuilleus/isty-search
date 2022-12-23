@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 )
@@ -40,6 +41,10 @@ type Database[T any] interface {
 	// Set in the DB a simple type: nothing, known or error.
 	// Is t is a file type, it return an error, and do not modify the DB.
 	SetSimple(key Key, t byte) error
+
+	// Iterate for each element of type TypeFileHTML.
+	// The in the logge rthe progression.
+	ForHTML(func(key Key, value *T, progress, total int)) error
 
 	// Return all redictions to valid file.
 	// If r1 -> r2 -> r3 -> p, the map contain:
@@ -231,7 +236,10 @@ func (db *database[T]) GetValue(key Key) (*T, error) {
 	} else if meta.Type < TypeFile || meta.Type >= TypeError {
 		return nil, NotFile
 	}
+	return db.readValue(key, meta)
+}
 
+func (db *database[T]) readValue(key Key, meta metavalue) (*T, error) {
 	// Read the data chunck
 	data := make([]byte, int(meta.Length))
 	_, err := db.dataFile.ReadAt(data, meta.Position)
@@ -363,6 +371,36 @@ func (db *database[_]) SetRedirect(key, destination Key) error {
 		return fmt.Errorf("SetRedirect(key=%s) %w", key, err)
 	}
 	db.mapMeta[key] = meta
+
+	return nil
+}
+
+func (db *database[T]) ForHTML(f func(Key, *T, int, int)) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	items := make([]keymetavalue, 0, len(db.mapMeta))
+	for key, meta := range db.mapMeta {
+		if meta.Type < TypeFile || TypeError <= meta.Type {
+			continue
+		}
+		items = append(items, keymetavalue{key, meta})
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].meta.Position < items[j].meta.Position
+	})
+
+	l := len(items)
+	for i, item := range items {
+		v, err := db.readValue(item.key, item.meta)
+		if err != nil {
+			return err
+		}
+		db.logger.Info("%", "%i", i, "%len", l)
+		f(item.key, v, i, l)
+	}
+	db.logger.Info("%end")
 
 	return nil
 }

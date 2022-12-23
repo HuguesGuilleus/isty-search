@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -144,4 +145,62 @@ func TestDB(t *testing.T) {
 
 	// No log
 	assert.Empty(t, *records)
+}
+
+func TestForHTML(t *testing.T) {
+	cookie1 := &http.Cookie{Name: "1", MaxAge: 1}
+	cookie2 := &http.Cookie{Name: "2", MaxAge: 2}
+	cookie3 := &http.Cookie{Name: "3", MaxAge: 3}
+
+	k1 := NewKeyString("k1")
+	k2 := NewKeyString("k2")
+	k3 := NewKeyString("k3")
+
+	defer os.RemoveAll("__db")
+	records, handler := sloghandlers.NewHandlerRecords(slog.InfoLevel)
+	urls, db, err := Open[http.Cookie](slog.New(handler), "__db")
+	assert.Nil(t, urls)
+	assert.NoError(t, err)
+	defer func() { assert.NoError(t, db.Close()) }()
+
+	// Add values
+	assert.NoError(t, db.SetSimple(NewKeyString("err"), TypeErrorNetwork))
+	assert.NoError(t, db.SetValue(k1, cookie1, TypeFileHTML))
+	assert.NoError(t, db.SetValue(k2, cookie2, TypeFileHTML))
+	assert.NoError(t, db.SetValue(k3, cookie3, TypeFileHTML))
+
+	// Check ForHTML caller
+	readed := make(map[Key]*http.Cookie, 3)
+	globalInc := 0
+	err = db.ForHTML(func(key Key, c *http.Cookie, i, total int) {
+		assert.Equal(t, 3, total)
+		assert.Nil(t, readed[key])
+		readed[key] = c
+		assert.Equal(t, globalInc, i)
+		assert.Equal(t, globalInc, c.MaxAge-1)
+		globalInc++
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, map[Key]*http.Cookie{
+		k1: cookie1,
+		k2: cookie2,
+		k3: cookie3,
+	}, readed)
+
+	// Log records
+	iterRorecords := make([]string, 0, len(*records))
+	for _, r := range *records {
+		if strings.HasPrefix(r, "INFO [db.stats.total]") {
+			continue
+		} else if strings.HasPrefix(r, "INFO [db.open]") {
+			continue
+		}
+		iterRorecords = append(iterRorecords, r)
+	}
+	assert.Equal(t, []string{
+		"INFO [%] %i=0 %len=3",
+		"INFO [%] %i=1 %len=3",
+		"INFO [%] %i=2 %len=3",
+		"INFO [%end]",
+	}, iterRorecords)
 }
