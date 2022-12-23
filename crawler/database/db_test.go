@@ -52,8 +52,9 @@ func TestDB(t *testing.T) {
 	// Wrong set
 	assert.Error(t, db.SetValue(key, &http.Cookie{}, TypeErrorNetwork))
 	assert.Error(t, db.SetValue(key, nil, TypeFileHTML))
-	v, err := db.GetValue(key)
+	v, storedTime, err := db.GetValue(key)
 	assert.Nil(t, v)
+	assert.True(t, storedTime.IsZero())
 	assert.Error(t, err)
 
 	// Set
@@ -63,9 +64,10 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, db.SetValue(NewKeyString("gejkhk"), &http.Cookie{}, TypeFileHTML))
 
 	// Get
-	v, err = db.GetValue(key)
+	v, storedTime, err = db.GetValue(key)
 	assert.NoError(t, err)
 	assert.Equal(t, &expectedValue, v)
+	assert.False(t, storedTime.IsZero())
 
 	// Set simple
 	ks := NewKeyString("simple")
@@ -107,9 +109,10 @@ func TestDB(t *testing.T) {
 	assert.Empty(t, urlsMap)
 
 	// Get
-	v, err = db.GetValue(key)
+	v, storedTime, err = db.GetValue(key)
 	assert.NoError(t, err)
 	assert.Equal(t, &expectedValue, v)
+	assert.False(t, storedTime.IsZero())
 
 	// Check simple
 	assert.Zero(t, db.(*database[http.Cookie]).mapMeta[kd])

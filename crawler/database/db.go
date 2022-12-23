@@ -29,7 +29,8 @@ type Database[T any] interface {
 	// Get the value from the DB.
 	// If the value if not a file, return NotFile.
 	// If the value do not exist, return NotExist.
-	GetValue(key Key) (*T, error)
+	// The time is the instant of value store.
+	GetValue(key Key) (*T, time.Time, error)
 
 	// Set the value to the DB, overwrite previous value.
 	// t must be a type of a regular file.
@@ -231,14 +232,19 @@ func (db *database[_]) AddURL(urls map[Key]*url.URL) error {
 	return nil
 }
 
-func (db *database[T]) GetValue(key Key) (*T, error) {
+func (db *database[T]) GetValue(key Key) (*T, time.Time, error) {
 	meta := db.getMetavalue(key)
 	if meta.Type == TypeNothing {
-		return nil, NotExist
+		return nil, time.Time{}, NotExist
 	} else if meta.Type < TypeFile || meta.Type >= TypeError {
-		return nil, NotFile
+		return nil, time.Time{}, NotFile
 	}
-	return db.readValue(key, meta)
+
+	value, err := db.readValue(key, meta)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	return value, time.Unix(meta.Time, 0), nil
 }
 
 func (db *database[T]) readValue(key Key, meta metavalue) (*T, error) {
