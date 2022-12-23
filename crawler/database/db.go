@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/common"
 	"golang.org/x/exp/slog"
+	"io"
 	"io/fs"
 	"net/url"
 	"os"
@@ -82,12 +83,20 @@ type database[T any] struct {
 
 	mutex    sync.Mutex
 	mapMeta  map[Key]metavalue
-	metaFile *os.File
-	urlsFile *os.File
-	dataFile *os.File
+	metaFile fileInferface
+	urlsFile fileInferface
+	dataFile fileInferface
 
 	// The position of write in the dataFile, so at end ogf the file.
 	position int64
+}
+
+// Can be a *os.File or *memFile
+type fileInferface interface {
+	io.Closer
+	io.ReaderAt
+	io.StringWriter
+	io.Writer
 }
 
 // Open the DB, and return all know URL.

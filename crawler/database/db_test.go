@@ -12,18 +12,7 @@ import (
 	"time"
 )
 
-func TestDB(t *testing.T) {
-	getURLS := func() (map[Key]*url.URL, int) {
-		originURLS := common.ParseURLs(
-			"https://google.com",
-			"https://www.google.com",
-		)
-		urlsMap := make(map[Key]*url.URL)
-		for _, u := range originURLS {
-			urlsMap[NewKeyURL(u)] = u
-		}
-		return urlsMap, len(urlsMap)
-	}
+func TestDBFile(t *testing.T) {
 	// Web use http.Cookie because it's a struct.
 	expectedValue := http.Cookie{
 		Name:    "yolo",
@@ -201,4 +190,86 @@ func TestForHTML(t *testing.T) {
 		"INFO [%] %i=2 %len=3",
 		"INFO [%end]",
 	}, *records)
+}
+
+func TestDBMemory(t *testing.T) {
+	// Web use http.Cookie because it's a struct.
+	expectedValue := http.Cookie{
+		Name:    "yolo",
+		Value:   "swag",
+		Expires: time.Date(2022, time.October, 5, 20, 8, 50, 0, time.UTC),
+	}
+	key := NewKeyString("key")
+
+	records, handler := sloghandlers.NewHandlerRecords(slog.InfoLevel)
+	db := OpenMem[http.Cookie](slog.New(handler))
+
+	// First AddURL
+	urlsMap, originLen := getURLS()
+	assert.NoError(t, db.AddURL(urlsMap))
+	assert.Len(t, urlsMap, originLen)
+
+	// Second AddURL
+	assert.NoError(t, db.AddURL(urlsMap))
+	assert.Empty(t, urlsMap)
+
+	// Wrong set
+	assert.Error(t, db.SetValue(key, &http.Cookie{}, TypeErrorNetwork))
+	assert.Error(t, db.SetValue(key, nil, TypeFileHTML))
+	v, storedTime, err := db.GetValue(key)
+	assert.Nil(t, v)
+	assert.True(t, storedTime.IsZero())
+	assert.Error(t, err)
+
+	// Set
+	assert.NoError(t, db.SetValue(key, &http.Cookie{}, TypeFileHTML))
+	assert.NoError(t, db.SetValue(key, &expectedValue, TypeFileHTML))
+	assert.NoError(t, db.SetValue(NewKeyString("qsdgfd"), &http.Cookie{}, TypeFileHTML))
+	assert.NoError(t, db.SetValue(NewKeyString("gejkhk"), &http.Cookie{}, TypeFileHTML))
+
+	// Get
+	v, storedTime, err = db.GetValue(key)
+	assert.NoError(t, err)
+	assert.Equal(t, &expectedValue, v)
+	assert.False(t, storedTime.IsZero())
+
+	// Set simple
+	ks := NewKeyString("simple")
+	assert.Error(t, db.SetSimple(ks, TypeFileRSS))
+	assert.NoError(t, db.SetSimple(ks, TypeErrorParsing))
+
+	meta := db.(*database[http.Cookie]).mapMeta[ks]
+	assert.NotZero(t, meta.Time)
+	meta.Time = 0
+	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
+
+	// Remove key
+	kd := NewKeyString("deleted")
+	assert.NoError(t, db.SetSimple(kd, TypeErrorParsing))
+	assert.NotZero(t, db.(*database[http.Cookie]).mapMeta[kd])
+	assert.NoError(t, db.SetSimple(kd, TypeNothing))
+	assert.Zero(t, db.(*database[http.Cookie]).mapMeta[kd])
+
+	// Redirection
+	ko := NewKeyString("origin")
+	kt := NewKeyString("target")
+	assert.NoError(t, db.SetRedirect(ko, kt))
+	meta = db.(*database[http.Cookie]).mapMeta[ko]
+	assert.NotZero(t, meta.Time)
+	meta.Time = 0
+	assert.Equal(t, metavalue{Type: TypeRedirect, Hash: kt}, meta)
+
+	assert.Nil(t, *records)
+}
+
+func getURLS() (map[Key]*url.URL, int) {
+	originURLS := common.ParseURLs(
+		"https://google.com",
+		"https://www.google.com",
+	)
+	urlsMap := make(map[Key]*url.URL)
+	for _, u := range originURLS {
+		urlsMap[NewKeyURL(u)] = u
+	}
+	return urlsMap, len(urlsMap)
 }
