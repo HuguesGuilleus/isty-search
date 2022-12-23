@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
@@ -35,9 +34,9 @@ func TestDB(t *testing.T) {
 
 	defer os.RemoveAll("__db")
 
-	records, handler := sloghandlers.NewHandlerRecords(slog.WarnLevel)
+	records, handler := sloghandlers.NewHandlerRecords(slog.InfoLevel)
 
-	urls, db, err := OpenWithKnow[http.Cookie](slog.New(handler), "__db")
+	urls, db, err := OpenWithKnow[http.Cookie](slog.New(handler), "__db", false)
 	assert.NoError(t, err)
 	assert.Empty(t, urls)
 
@@ -96,7 +95,7 @@ func TestDB(t *testing.T) {
 
 	// Reopen
 	assert.NoError(t, db.Close())
-	urls, db, err = OpenWithKnow[http.Cookie](slog.New(handler), "__db")
+	urls, db, err = OpenWithKnow[http.Cookie](slog.New(handler), "__db", false)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{
 		"https://google.com",
@@ -144,7 +143,11 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, db.Close())
 
 	// No log
-	assert.Empty(t, *records)
+	assert.Equal(t, []string{
+		"INFO [db.open] base=__db",
+		"INFO [db.open] base=__db",
+		"INFO [db.open] base=__db",
+	}, *records)
 }
 
 func TestForHTML(t *testing.T) {
@@ -188,19 +191,11 @@ func TestForHTML(t *testing.T) {
 	}, readed)
 
 	// Log records
-	iterRorecords := make([]string, 0, len(*records))
-	for _, r := range *records {
-		if strings.HasPrefix(r, "INFO [db.stats.total]") {
-			continue
-		} else if strings.HasPrefix(r, "INFO [db.open]") {
-			continue
-		}
-		iterRorecords = append(iterRorecords, r)
-	}
 	assert.Equal(t, []string{
+		"INFO [db.open] base=__db",
 		"INFO [%] %i=0 %len=3",
 		"INFO [%] %i=1 %len=3",
 		"INFO [%] %i=2 %len=3",
 		"INFO [%end]",
-	}, iterRorecords)
+	}, *records)
 }

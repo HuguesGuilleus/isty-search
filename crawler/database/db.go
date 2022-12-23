@@ -90,16 +90,16 @@ type database[T any] struct {
 }
 
 // Open the DB, and return all know URL.
-func OpenWithKnow[T any](logger *slog.Logger, base string) ([]*url.URL, Database[T], error) {
-	return open[T](logger, base, []byte{TypeKnow})
+func OpenWithKnow[T any](logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, Database[T], error) {
+	return open[T](logger, base, logStatistics, []byte{TypeKnow})
 }
 
 // Open the database but return no url.
 func Open[T any](logger *slog.Logger, base string) ([]*url.URL, Database[T], error) {
-	return open[T](logger, base, nil)
+	return open[T](logger, base, false, nil)
 }
 
-func open[T any](logger *slog.Logger, base string, acceptedTypes []byte) ([]*url.URL, Database[T], error) {
+func open[T any](logger *slog.Logger, base string, logStatistics bool, acceptedTypes []byte) ([]*url.URL, Database[T], error) {
 	base = filepath.Clean(base)
 	if err := os.MkdirAll(base, 0o775); err != nil {
 		logger.Error("db.open", err, "mkdir", base)
@@ -131,14 +131,16 @@ func open[T any](logger *slog.Logger, base string, acceptedTypes []byte) ([]*url
 	}
 
 	logger.Info("db.open", "base", base)
-	statsTicker := time.NewTicker(time.Second * 30)
-
-	go func() {
-		getStatistics(mapMeta).Log(logger)
-		for range statsTicker.C {
+	statsTicker := &time.Ticker{}
+	if logStatistics {
+		statsTicker = time.NewTicker(time.Second * 30)
+		go func() {
 			getStatistics(mapMeta).Log(logger)
-		}
-	}()
+			for range statsTicker.C {
+				getStatistics(mapMeta).Log(logger)
+			}
+		}()
+	}
 
 	return urls, &database[T]{
 		logger:      logger,

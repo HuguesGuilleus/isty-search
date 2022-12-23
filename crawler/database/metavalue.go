@@ -21,6 +21,8 @@ const (
 	TypeErrorParsing    byte = 129
 	TypeErrorFilterURL  byte = 130
 	TypeErrorFilterPage byte = 131
+	TypeErrorRobot      byte = 132
+	TypeErrorNoIndex    byte = 133
 )
 
 // The maximum length of the key and the metavalue.
