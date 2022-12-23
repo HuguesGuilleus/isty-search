@@ -3,23 +3,10 @@ package crawler
 import (
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler/db"
-	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
-	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
 	"net/url"
 	"path/filepath"
 	"time"
 )
-
-type Page struct {
-	URL  url.URL
-	Time time.Time
-
-	// Content, on of the following filed.
-	Error    string
-	Html     *htmlnode.Root
-	Robots   *robotstxt.File
-	Redirect *url.URL
-}
 
 // A composite DB with sub subdatabase for specific usage.
 type DB struct {
