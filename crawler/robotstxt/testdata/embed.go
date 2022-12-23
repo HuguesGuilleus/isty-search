@@ -1,4 +1,4 @@
-package robotstxtdatatest
+package robotstxttestdata
 
 import (
 	_ "embed"
