@@ -8,7 +8,6 @@ import (
 	"github.com/HuguesGuilleus/isty-search/common"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-	"net/url"
 	"sort"
 	"strings"
 	"unicode"
@@ -181,36 +180,6 @@ func convertAttributes(srcAttributes []html.Attribute) (id string, classes []str
 		}
 	}
 	return
-}
-
-// From this document, get all url from anchor element.
-// Filter url with protocol different to http or https.
-func (root Root) GetURL(origin *url.URL) []*url.URL {
-	foundedURL := make(map[string]bool, 0)
-	root.Body.Visit(func(node Node) {
-		if node.TagName == atom.A {
-			if href := node.Attributes["href"]; href != "" {
-				foundedURL[href] = true
-			}
-		}
-	})
-
-	sliceURL := make([]*url.URL, 0, len(foundedURL))
-	for stringURL := range foundedURL {
-		u, _ := origin.Parse(strings.Clone(stringURL))
-		if u == nil {
-			continue
-		} else if u.Scheme != "https" && u.Scheme != "http" {
-			continue
-		}
-		u.User = nil
-		u.Fragment = ""
-		u.ForceQuery = false
-		u.RawQuery = u.Query().Encode()
-		sliceURL = append(sliceURL, u)
-	}
-
-	return sliceURL
 }
 
 // Call f on each node, and sub node.

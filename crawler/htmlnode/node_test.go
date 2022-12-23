@@ -2,19 +2,13 @@ package htmlnode
 
 import (
 	_ "embed"
-	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html/atom"
-	"sort"
 	"testing"
 )
 
-var (
-	//go:embed example-simple.html
-	exampleSimpleHtml []byte
-	//go:embed example-url.html
-	exampleURLHtml []byte
-)
+//go:embed example-simple.html
+var exampleSimpleHtml []byte
 
 func TestParse(t *testing.T) {
 	linkedData := `{"@context":"https:\/\/schema.org","@type":"Article","name":"Minijupe","url":"https:\/\/fr.wikipedia.org\/wiki\/Minijupe","sameAs":"http:\/\/www.wikidata.org\/entity\/Q230823","mainEntity":"http:\/\/www.wikidata.org\/entity\/Q230823","author":{"@type":"Organization","name":"Contributeurs aux projets Wikimedia"},"publisher":{"@type":"Organization","name":"Fondation Wikimedia, Inc.","logo":{"@type":"ImageObject","url":"https:\/\/www.wikimedia.org\/static\/images\/wmf-hor-googpub.png"}},"datePublished":"2005-11-21T14:16:45Z","dateModified":"2022-10-19T05:21:00Z","image":"https:/\/upload.wikimedia.org\/wikipedia\/commons\/b\/b0\/Minirock_%28Lack%29_Photo_Model_2.jpg","headline":"jupe tr\u00e8s courte, droite ou pliss\u00e9e, \u00ab dont la longueur ne devrait pas exc\u00e9der 10 cm sous les fesses pour justifier de cette appellation \u00bb"}`
@@ -84,23 +78,4 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, expected.Body.PrintLines(), received.Body.PrintLines())
 	assert.Equal(t, expected.Head.PrintLines(), received.Head.PrintLines())
 	assert.Equal(t, expected, received)
-}
-
-func TestGetURL(t *testing.T) {
-	root, err := Parse(exampleURLHtml)
-	assert.NoError(t, err)
-
-	receivedURL := root.GetURL(common.ParseURL("https://example.com/dir/subdir/file.html"))
-	sort.Slice(receivedURL, func(i, j int) bool {
-		return receivedURL[i].String() < receivedURL[j].String()
-	})
-
-	assert.Equal(t, common.ParseURLs(
-		"https://example.com/",
-		"https://example.com/dir/",
-		"https://example.com/dir/subdir/file.html",
-		"https://example.com/dir/subdir/file.html?a=1&b=2",
-		"https://example.com/swag",
-		"https://github.com/",
-	), receivedURL)
 }
