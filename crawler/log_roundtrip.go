@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"golang.org/x/exp/slog"
 	"net/http"
 )
@@ -12,15 +11,12 @@ type logRoundTripper struct {
 	roundTripper http.RoundTripper
 }
 
-func newlogRoundTripper(roundTripper http.RoundTripper, logHandler slog.Handler) http.RoundTripper {
+func newlogRoundTripper(roundTripper http.RoundTripper, logger *slog.Logger) http.RoundTripper {
 	if roundTripper == nil {
 		roundTripper = http.DefaultTransport
 	}
-	if logHandler == nil {
-		logHandler = sloghandlers.NewNullHandler()
-	}
 	return &logRoundTripper{
-		logger:       slog.New(logHandler),
+		logger:       logger,
 		roundTripper: roundTripper,
 	}
 }

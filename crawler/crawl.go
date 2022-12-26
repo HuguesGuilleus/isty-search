@@ -34,7 +34,7 @@ type Config struct {
 	// Must: minCrawlDelay < maxCrawlDelay
 	MinCrawlDelay, MaxCrawlDelay time.Duration
 
-	LogHandler slog.Handler
+	Logger *slog.Logger
 
 	// Use to fetch all HTTP ressource.
 	RoundTripper http.RoundTripper
@@ -49,7 +49,7 @@ func Crawl(mainContext context.Context, config Config) error {
 		maxGo:         config.MaxGo,
 		filterURL:     config.FilterURL,
 		filterPage:    config.FilterPage,
-		roundTripper:  newlogRoundTripper(config.RoundTripper, config.LogHandler),
+		roundTripper:  newlogRoundTripper(config.RoundTripper, config.Logger),
 		maxLength:     config.MaxLength,
 		minCrawlDelay: config.MinCrawlDelay,
 		maxCrawlDelay: config.MaxCrawlDelay,

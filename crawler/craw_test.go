@@ -23,8 +23,9 @@ func TestCrawl(t *testing.T) {
 	err := error(nil)
 
 	records, logHandler := sloghandlers.NewHandlerRecords(slog.DebugLevel)
+	logger := slog.New(logHandler)
 
-	db := crawldatabase.OpenMem[Page](slog.New(logHandler))
+	db := crawldatabase.OpenMem[Page](logger)
 	err = Crawl(context.Background(), Config{
 		DB:    db,
 		Input: []*url.URL{common.ParseURL("https://example.org/")},
@@ -43,7 +44,7 @@ func TestCrawl(t *testing.T) {
 		MaxLength:    15_000_000,
 		MaxGo:        1,
 		RoundTripper: datatestRoundTripper{},
-		LogHandler:   logHandler,
+		Logger:       logger,
 	})
 	assert.NoError(t, err)
 
