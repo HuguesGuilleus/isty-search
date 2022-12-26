@@ -14,7 +14,6 @@ import (
 	"golang.org/x/net/html"
 	"io"
 	"testing"
-	"time"
 )
 
 var (
@@ -29,7 +28,6 @@ var (
 
 		return &crawler.Page{
 			URL:  *pageSourceURL,
-			Time: time.Now().UTC(),
 			Html: node,
 		}
 	}()
@@ -94,7 +92,6 @@ func TestSaver(t *testing.T) {
 			data := testEncoder(testPageSource, encoder.encode, compressor.compressor)
 			page := testDecoder[crawler.Page](data, encoder.decode, compressor.decompressor)
 			assert.Equal(t, testPageSource.URL, page.URL, name)
-			assert.Equal(t, testPageSource.Time, page.Time, name)
 			assert.Equal(t, testPageSource.Html.RootId, page.Html.RootId, name)
 			assert.Equal(t, testPageSource.Html.RootClasses, page.Html.RootClasses, name)
 			assert.Equal(t, testPageSource.Html.RootAttributes, page.Html.RootAttributes, name)
