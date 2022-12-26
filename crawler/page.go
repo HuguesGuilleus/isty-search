@@ -7,18 +7,14 @@ import (
 	"golang.org/x/net/html/atom"
 	"net/url"
 	"strings"
-	"time"
 )
 
 type Page struct {
-	URL  url.URL
-	Time time.Time
+	URL url.URL
 
 	// Content, on of the following filed.
-	Error    string
-	Html     *htmlnode.Root
-	Robots   *robotstxt.File
-	Redirect *url.URL
+	Html   *htmlnode.Root
+	Robots *robotstxt.File
 }
 
 // Get all urls of the page
