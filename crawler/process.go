@@ -1,29 +1,27 @@
 package crawler
 
 import (
-	"github.com/HuguesGuilleus/isty-search/crawler/db"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"golang.org/x/exp/slog"
 )
 
-// Call each Page with a HTML from the database call is not concurently.
-func Process(database *DB, slogHandler slog.Handler, processList ...interface{ Process(*Page) }) error {
-	logger := slog.New(slogHandler)
+// Call each Page with a HTML from the database call is sequenticaly.
+func Process(db crawldatabase.Database[Page], logger *slog.Logger, processList ...interface{ Process(*Page) }) error {
 	defer logger.Info("%end")
-
-	return database.URLsDB.ForDone(func(key db.Key, i, total int) error {
-		page, err := database.KeyValueDB.Get(key)
-		if err != nil {
-			return err
-		} else if page.Html == nil {
-			return nil
+	return db.ForHTML(func(key crawldatabase.Key, page *Page, progress, total int) {
+		if page.Html == nil {
+			return
 		}
-
-		for _, p := range processList {
-			p.Process(page)
+		for _, process := range processList {
+			process.Process(page)
 		}
-
-		logger.Info("%", "%i", i, "%len", total)
-
-		return nil
+		logger.Info("%", "%i", progress, "%len", total)
 	})
+}
+
+// A function that can be used by Process function.
+type ProcessFunc func(page *Page)
+
+func (process ProcessFunc) Process(page *Page) {
+	process(page)
 }

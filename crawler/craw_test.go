@@ -74,6 +74,21 @@ func TestCrawl(t *testing.T) {
 		assert.Equal(t, root.Head.PrintLines(), page.Html.Head.PrintLines())
 		assert.Equal(t, root.Body.PrintLines(), page.Html.Body.PrintLines())
 	}
+
+	// Test the process
+	foundURL := []string{}
+	assert.NoError(t, Process(db,
+		slog.New(sloghandlers.NewNullHandler()),
+		ProcessFunc(func(page *Page) {
+			foundURL = append(foundURL, page.URL.String())
+		}),
+	))
+	sort.Strings(foundURL)
+	assert.Equal(t, []string{
+		"https://example.org/",
+		"https://example.org/dir/",
+		"https://example.org/dir/subdir/",
+	}, foundURL)
 }
 
 //go:embed datatest
