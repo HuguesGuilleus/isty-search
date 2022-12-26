@@ -6,7 +6,6 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
 	"golang.org/x/net/html/atom"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 )
@@ -54,23 +53,23 @@ func getParentURL(urls map[crawldatabase.Key]*url.URL, src *url.URL) {
 	urls[crawldatabase.NewKeyURL(src)] = src
 
 	// No query
-	u := src.JoinPath("")
+	u := cloneURL(src)
 	u.RawQuery = ""
 	urls[crawldatabase.NewKeyURL(u)] = u
 
 	// Parent root
-	u = src.JoinPath("")
+	u = cloneURL(src)
 	u.RawQuery = ""
-	u.Path = "/"
-	urls[crawldatabase.NewKeyURL(u)] = u
-	for dir := path.Dir(src.Path); dir != "/"; dir = path.Dir(dir) {
-		parent := u.JoinPath("/", dir+"/")
-		urls[crawldatabase.NewKeyURL(parent)] = parent
+
+	// println("\n" + u.String())
+	for u.Path != "/" {
+		u = u.JoinPath("../")
+		urls[crawldatabase.NewKeyURL(u)] = u
 	}
 
 	// Port
 	if newHost, _, cutted := strings.Cut(u.Host, ":"); cutted {
-		u = u.JoinPath("")
+		u = cloneURL(u)
 		u.Host = newHost
 		urls[crawldatabase.NewKeyURL(u)] = u
 	}
@@ -80,11 +79,16 @@ func getParentURL(urls map[crawldatabase.Key]*url.URL, src *url.URL) {
 	count := strings.Count(host, ".") - 1
 	for i := 0; i < count; i++ {
 		_, host, _ = strings.Cut(host, ".")
-		u = u.JoinPath("")
+		u = cloneURL(u)
 		u.Host = host
 		urls[crawldatabase.NewKeyURL(u)] = u
 	}
-	u = u.JoinPath("")
+	u = cloneURL(u)
 	u.Host = "www." + host
 	urls[crawldatabase.NewKeyURL(u)] = u
+}
+
+func cloneURL(src *url.URL) *url.URL {
+	u := *src
+	return &u
 }

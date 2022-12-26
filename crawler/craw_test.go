@@ -5,7 +5,7 @@ import (
 	"context"
 	"embed"
 	"github.com/HuguesGuilleus/isty-search/common"
-	database "github.com/HuguesGuilleus/isty-search/crawler/db"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"github.com/stretchr/testify/assert"
@@ -14,20 +14,17 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"testing"
 )
 
 func TestCrawl(t *testing.T) {
-	defer os.RemoveAll("_testdb")
-	db, urls, err := OpenDB("_testdb")
-	assert.NoError(t, err)
-	assert.Empty(t, urls)
-	defer db.Close()
+	err := error(nil)
 
 	records, logHandler := sloghandlers.NewHandlerRecords(slog.DebugLevel)
+
+	db := crawldatabase.OpenMem[Page](slog.New(logHandler))
 	err = Crawl(context.Background(), Config{
 		DB:    db,
 		Input: []*url.URL{common.ParseURL("https://example.org/")},
@@ -39,7 +36,7 @@ func TestCrawl(t *testing.T) {
 		}},
 		FilterPage: []func(*htmlnode.Root) string{func(page *htmlnode.Root) string {
 			if page.Meta.Langage != "en" {
-				return "wring langage"
+				return "wrong langage"
 			}
 			return ""
 		}},
@@ -60,18 +57,6 @@ func TestCrawl(t *testing.T) {
 		`INFO [fetch.ok] status=200 url=https://example.org/robots.txt`,
 	}, *records)
 
-	// Test URLs was fetched
-	urls, err = db.URLsDB.Merge(common.ParseURLs(
-		"https://example.org/",
-		"https://example.org/dir/",
-		"https://example.org/dir/subdir/",
-		"https://example.org/es.html",
-		"https://example.org/robotBlocked.html",
-		"https://google.com/",
-	))
-	assert.NoError(t, err)
-	assert.Empty(t, urls)
-
 	// Test page
 	paths := []string{
 		"/",
@@ -84,7 +69,7 @@ func TestCrawl(t *testing.T) {
 		root, err := htmlnode.Parse(data)
 		assert.NoError(t, err)
 
-		page, err := db.KeyValueDB.Get(database.NewStringKey("https://example.org" + path))
+		page, _, err := db.GetValue(crawldatabase.NewKeyString("https://example.org" + path))
 		assert.NoError(t, err, "https://example.org"+path)
 		assert.Equal(t, root.Head.PrintLines(), page.Html.Head.PrintLines())
 		assert.Equal(t, root.Body.PrintLines(), page.Html.Body.PrintLines())
@@ -111,7 +96,7 @@ func (_ datatestRoundTripper) RoundTrip(request *http.Request) (*http.Response, 
 	}
 	data, err := fs.ReadFile(datatest, "datatest"+path)
 	if err != nil {
-		panic("Not found:" + path)
+		panic("Not found: " + path)
 	}
 
 	return &http.Response{

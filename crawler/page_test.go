@@ -38,5 +38,6 @@ func TestGetURL(t *testing.T) {
 		"https://www.github.com/",
 		"https://www.yolo.net/",
 		"https://yolo.net/",
+		"https://yolo.net/super/",
 	}, urls)
 }

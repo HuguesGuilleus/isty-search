@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"io"
 	"log"
@@ -17,7 +18,7 @@ import (
 var tooRedirect = errors.New("Too redirect")
 
 type fetchContext struct {
-	db *DB
+	db crawldatabase.Database[Page]
 
 	// The Hosts, a map to store all urls that will be crawled.
 	// The key is generate by createKey().
@@ -113,9 +114,12 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 }
 
 // Add urls in the URLsDB and in the ctx.host, then lauch if it's possible new crawl goroutine.
-func (ctx *fetchContext) addURLs(urls []*url.URL) {
-	urls, _ = ctx.db.URLsDB.Merge(urls)
+func (ctx *fetchContext) addURLs(urls map[crawldatabase.Key]*url.URL) {
+	ctx.db.AddURL(urls)
+	ctx.planURLs(urls)
+}
 
+func (ctx *fetchContext) planURLs(urls map[crawldatabase.Key]*url.URL) {
 	ctx.hostsMutex.Lock()
 	defer ctx.hostsMutex.Unlock()
 
@@ -150,50 +154,58 @@ func createKey(scheme, host string) string { return scheme + ":" + host }
 /* FETCHING ONE */
 
 func fetchOne(ctx *fetchContext, u *url.URL) {
+	key := crawldatabase.NewKeyURL(u)
+
 	// Get the body
 	body, redirect, errString := fetchBytes(u, ctx.roundTripper, 1, ctx.maxLength)
 	if errString != "" {
-		ctx.db.ban(u, errString)
+		ctx.db.SetSimple(key, crawldatabase.TypeErrorNetwork)
 		return
 	} else if redirect != nil {
-		ctx.db.save(u, &Page{Redirect: redirect})
-		ctx.addURLs([]*url.URL{redirect})
+		ctx.addURLs(map[crawldatabase.Key]*url.URL{
+			crawldatabase.NewKeyURL(redirect): redirect,
+		})
+		ctx.db.SetRedirect(key, crawldatabase.NewKeyURL(redirect))
 		return
 	}
 	defer common.RecycleBuffer(body)
 
+	// Parse the body
 	htmlRoot, err := htmlnode.Parse(body.Bytes())
 	if err != nil {
-		ctx.db.ban(u, err.Error())
+		ctx.db.SetSimple(key, crawldatabase.TypeErrorParsing)
 		return
 	}
 
 	// Post filter
 	if htmlRoot.Meta.NoIndex {
-		ctx.db.ban(u, "noindex")
+		ctx.db.SetSimple(key, crawldatabase.TypeErrorNoIndex)
 		return
 	}
 	for _, filter := range ctx.filterPage {
 		if strike := filter(htmlRoot); strike != "" {
-			ctx.db.ban(u, strike)
+			ctx.db.SetSimple(key, crawldatabase.TypeErrorFilterPage)
 			return
 		}
 	}
 
+	page := &Page{
+		URL:  *u,
+		Html: htmlRoot,
+	}
+
 	// Get URL
 	if !htmlRoot.Meta.NoFollow {
-		ctx.addURLs(htmlRoot.GetURL(u))
+		ctx.addURLs(page.GetURLs())
 	}
 
 	// Save it
-	page := &Page{Html: htmlRoot}
-	ctx.db.save(u, page)
+	ctx.db.SetValue(key, page, crawldatabase.TypeFileHTML)
 
 	return
 }
 
 // Strike all url (from same host), and return it with crawDelay.
-// - Already cached
 // - The path is "/robots.txt"
 // - Filtered
 // - Blocked by robots.
@@ -206,14 +218,14 @@ urlFor:
 		// Context filters
 		for _, filter := range ctx.filterURL {
 			if reason := filter(u); reason != "" {
-				ctx.db.ban(u, reason)
+				ctx.db.SetSimple(crawldatabase.NewKeyURL(u), crawldatabase.TypeErrorFilterURL)
 				continue urlFor
 			}
 		}
 
 		// Robots.txt
 		if !robotsGetter().Allow(u) {
-			ctx.db.ban(u, "robots.txt")
+			ctx.db.SetSimple(crawldatabase.NewKeyURL(u), crawldatabase.TypeErrorRobot)
 			continue urlFor
 		}
 

@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"context"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"golang.org/x/exp/slog"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 
 type Config struct {
 	// The database, DB or the root if DB is nil.
-	DB *DB
+	DB crawldatabase.Database[Page]
 
 	// Root URL to begin to read
 	Input []*url.URL
@@ -59,7 +60,17 @@ func Crawl(mainContext context.Context, config Config) error {
 		return nil
 	}
 
-	fetchContext.addURLs(config.Input)
+	dbUrls := make(map[crawldatabase.Key]*url.URL, len(config.Input))
+	for _, u := range config.Input {
+		dbUrls[crawldatabase.NewKeyURL(u)] = u
+	}
+	fetchContext.db.AddURL(dbUrls)
+
+	urls := make(map[crawldatabase.Key]*url.URL, len(config.Input))
+	for _, u := range config.Input {
+		urls[crawldatabase.NewKeyURL(u)] = u
+	}
+	fetchContext.planURLs(urls)
 
 	select {
 	case <-end:

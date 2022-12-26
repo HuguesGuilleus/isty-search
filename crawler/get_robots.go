@@ -2,7 +2,7 @@ package crawler
 
 import (
 	"github.com/HuguesGuilleus/isty-search/common"
-	"github.com/HuguesGuilleus/isty-search/crawler/db"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
 	"net/http"
 	"net/url"
@@ -12,13 +12,13 @@ import (
 const robotsPath = "/robots.txt"
 
 // Get once the robots file. See robotGet for details.
-func robotGetter(database *DB, scheme, host string, roundTripper http.RoundTripper) func() *robotstxt.File {
+func robotGetter(db crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) func() *robotstxt.File {
 	robot := robotstxt.File{}
 	todo := true
 	return func() *robotstxt.File {
 		if todo {
 			todo = false
-			robot = robotGet(database, scheme, host, roundTripper)
+			robot = robotGet(db, scheme, host, roundTripper)
 		}
 		return &robot
 	}
@@ -27,16 +27,16 @@ func robotGetter(database *DB, scheme, host string, roundTripper http.RoundTripp
 // RobotGetter load it, or download and store it from the objectDB.
 // On error (from cache or when download), use robotstxt.DefaultRobots.
 // If cache is more than 24h, dowload it.
-func robotGet(database *DB, scheme, host string, roundTripper http.RoundTripper) robotstxt.File {
+func robotGet(db crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) robotstxt.File {
 	u := url.URL{
 		Scheme: scheme,
 		Host:   host,
 		Path:   robotsPath,
 	}
-	key := db.NewURLKey(&u)
+	key := crawldatabase.NewKeyURL(&u)
 
 	// Get from the DB
-	if page, _ := database.KeyValueDB.Get(key); page != nil && time.Since(page.Time) < time.Hour*24 {
+	if page, date, _ := db.GetValue(key); page != nil && time.Since(date) < time.Hour*24 {
 		if page.Robots != nil {
 			return *page.Robots
 		}
@@ -49,7 +49,11 @@ func robotGet(database *DB, scheme, host string, roundTripper http.RoundTripper)
 		common.RecycleBuffer(buff)
 	}
 
-	database.save(&u, &Page{Robots: &robots})
+	db.SetValue(key, &Page{
+		URL:    u,
+		Robots: &robots},
+		crawldatabase.TypeFileRobots,
+	)
 
 	return robots
 }
