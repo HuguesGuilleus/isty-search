@@ -64,7 +64,7 @@ func TestCrawl(t *testing.T) {
 		"/dir/subdir/",
 	}
 	for _, path := range paths {
-		data, err := fs.ReadFile(datatest, "datatest"+path+"index.html")
+		data, err := fs.ReadFile(testdata, "testdata"+path+"index.html")
 		assert.NoError(t, err)
 		root, err := htmlnode.Parse(data)
 		assert.NoError(t, err)
@@ -91,8 +91,8 @@ func TestCrawl(t *testing.T) {
 	}, foundURL)
 }
 
-//go:embed datatest
-var datatest embed.FS
+//go:embed testdata
+var testdata embed.FS
 
 type datatestRoundTripper struct{}
 
@@ -109,7 +109,7 @@ func (_ datatestRoundTripper) RoundTrip(request *http.Request) (*http.Response, 
 	if strings.HasSuffix(path, "/") {
 		path += "index.html"
 	}
-	data, err := fs.ReadFile(datatest, "datatest"+path)
+	data, err := fs.ReadFile(testdata, "testdata"+path)
 	if err != nil {
 		panic("Not found: " + path)
 	}
