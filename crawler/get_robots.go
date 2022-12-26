@@ -10,6 +10,7 @@ import (
 )
 
 const robotsPath = "/robots.txt"
+const faviconPath = "/favicon.ico"
 
 // Get once the robots file. See robotGet for details.
 func robotGetter(db crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) func() *robotstxt.File {

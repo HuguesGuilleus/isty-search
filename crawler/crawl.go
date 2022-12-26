@@ -17,10 +17,11 @@ type Config struct {
 	// Root URL to begin to read
 	Input []*url.URL
 
-	// Filter by URL of the page (for exemple by the language).
-	// Empty string return signify no error.
-	FilterURL  []func(*url.URL) string
-	FilterPage []func(*htmlnode.Root) string
+	// Filter by URL or by the page (for exemple by the language).
+	// Return true to strike the page.
+	// The file: "/robots.txt" and "/favicon.ico" are not tested.
+	FilterURL  []func(*url.URL) bool
+	FilterPage []func(*htmlnode.Root) bool
 
 	// The max size of the html page.
 	// 15M for Google https://developers.google.com/search/docs/crawling-indexing/googlebot#how-googlebot-accesses-your-site

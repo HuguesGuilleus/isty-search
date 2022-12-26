@@ -37,8 +37,8 @@ type fetchContext struct {
 	// Maximum of crawl goroutine
 	maxGo int
 
-	filterURL  []func(*url.URL) string
-	filterPage []func(*htmlnode.Root) string
+	filterURL  []func(*url.URL) bool
+	filterPage []func(*htmlnode.Root) bool
 
 	roundTripper http.RoundTripper
 
@@ -183,7 +183,7 @@ func fetchOne(ctx *fetchContext, u *url.URL) {
 		return
 	}
 	for _, filter := range ctx.filterPage {
-		if strike := filter(htmlRoot); strike != "" {
+		if filter(htmlRoot) {
 			ctx.db.SetSimple(key, crawldatabase.TypeErrorFilterPage)
 			return
 		}
@@ -215,9 +215,14 @@ func (ctx *fetchContext) strikeURLs(scheme, host string, urls []*url.URL) ([]*ur
 
 urlFor:
 	for _, u := range urls {
+		switch u.Path {
+		case robotsPath, faviconPath:
+			continue urlFor
+		}
+
 		// Context filters
 		for _, filter := range ctx.filterURL {
-			if reason := filter(u); reason != "" {
+			if filter(u) {
 				ctx.db.SetSimple(crawldatabase.NewKeyURL(u), crawldatabase.TypeErrorFilterURL)
 				continue urlFor
 			}

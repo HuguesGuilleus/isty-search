@@ -29,18 +29,12 @@ func TestCrawl(t *testing.T) {
 	err = Crawl(context.Background(), Config{
 		DB:    db,
 		Input: []*url.URL{common.ParseURL("https://example.org/")},
-		FilterURL: []func(*url.URL) string{func(u *url.URL) string {
-			if u.Host != "example.org" {
-				return "wrong host"
-			}
-			return ""
-		}},
-		FilterPage: []func(*htmlnode.Root) string{func(page *htmlnode.Root) string {
-			if page.Meta.Langage != "en" {
-				return "wrong langage"
-			}
-			return ""
-		}},
+		FilterURL: []func(*url.URL) bool{
+			func(u *url.URL) bool { return u.Host != "example.org" },
+		},
+		FilterPage: []func(*htmlnode.Root) bool{
+			func(page *htmlnode.Root) bool { return page.Meta.Langage != "en" },
+		},
 		MaxLength:    15_000_000,
 		MaxGo:        1,
 		RoundTripper: datatestRoundTripper{},
