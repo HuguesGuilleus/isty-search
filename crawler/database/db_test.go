@@ -202,7 +202,9 @@ func TestDBMemory(t *testing.T) {
 	key := NewKeyString("key")
 
 	records, handler := sloghandlers.NewHandlerRecords(slog.InfoLevel)
-	db := OpenMem[http.Cookie](slog.New(handler))
+	urls, db, err := OpenMemory[http.Cookie](slog.New(handler))
+	assert.Nil(t, urls)
+	assert.NoError(t, err)
 
 	// First AddURL
 	urlsMap, originLen := getURLS()

@@ -25,7 +25,7 @@ func TestCrawl(t *testing.T) {
 	records, logHandler := sloghandlers.NewHandlerRecords(slog.DebugLevel)
 	logger := slog.New(logHandler)
 
-	db := crawldatabase.OpenMem[Page](logger)
+	_, db, _ := crawldatabase.OpenMemory[Page](logger)
 	err = Crawl(context.Background(), Config{
 		DB:    db,
 		Input: []*url.URL{common.ParseURL("https://example.org/")},

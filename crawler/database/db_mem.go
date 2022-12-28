@@ -3,13 +3,15 @@ package crawldatabase
 import (
 	"golang.org/x/exp/slog"
 	"io"
+	"net/url"
 	"time"
 )
 
 // Open a database in the memory, so it not persistent.
 // Use only for test.
-func OpenMem[T any](logger *slog.Logger) Database[T] {
-	return &database[T]{
+// Always retuns nil for url slice and error.
+func OpenMemory[T any](logger *slog.Logger) ([]*url.URL, Database[T], error) {
+	return nil, &database[T]{
 		logger:      logger,
 		statsTicker: &time.Ticker{},
 		base:        "$memory",
@@ -18,7 +20,7 @@ func OpenMem[T any](logger *slog.Logger) Database[T] {
 		urlsFile:    &memFile{},
 		dataFile:    &memFile{},
 		position:    0,
-	}
+	}, nil
 }
 
 type memFile []byte
