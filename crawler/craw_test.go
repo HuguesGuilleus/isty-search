@@ -20,14 +20,19 @@ import (
 )
 
 func TestCrawl(t *testing.T) {
-	err := error(nil)
-
 	records, logHandler := sloghandlers.NewHandlerRecords(slog.DebugLevel)
 	logger := slog.New(logHandler)
 
-	_, db, _ := crawldatabase.OpenMemory[Page](logger)
-	err = Crawl(context.Background(), Config{
-		DB:    db,
+	_, db, _ := crawldatabase.OpenMemory[Page](logger, "", false)
+	err := Crawl(context.Background(), Config{
+		DBopener: func(argLogger *slog.Logger, base string, logStatistics bool) ([]*url.URL, crawldatabase.Database[Page], error) {
+			assert.Equal(t, logger, argLogger)
+			assert.Equal(t, "$db-base$", base)
+			assert.True(t, logStatistics)
+			return nil, db, nil
+		},
+		DBbase: "$db-base$",
+
 		Input: []*url.URL{common.ParseURL("https://example.org/")},
 		FilterURL: []func(*url.URL) bool{
 			func(u *url.URL) bool { return u.Host != "example.org" },

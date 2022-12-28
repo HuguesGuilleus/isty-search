@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetRobotstxt(t *testing.T) {
-	_, db, _ := crawldatabase.OpenMemory[Page](nil)
+	_, db, _ := crawldatabase.OpenMemory[Page](nil, "", false)
 
 	robots := *robotGetter(db, "https", "www.monde-diplomatique.fr", mapRoundTripper{
 		"https://www.monde-diplomatique.fr/robots.txt": robotstxttestdata.MondeDiplomatique,

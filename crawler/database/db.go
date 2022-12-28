@@ -105,8 +105,8 @@ func OpenWithKnow[T any](logger *slog.Logger, base string, logStatistics bool) (
 }
 
 // Open the database but return no url.
-func Open[T any](logger *slog.Logger, base string) ([]*url.URL, Database[T], error) {
-	return open[T](logger, base, false, nil)
+func Open[T any](logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, Database[T], error) {
+	return open[T](logger, base, logStatistics, nil)
 }
 
 func open[T any](logger *slog.Logger, base string, logStatistics bool, acceptedTypes []byte) ([]*url.URL, Database[T], error) {

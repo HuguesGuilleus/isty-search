@@ -129,7 +129,7 @@ func TestDBFile(t *testing.T) {
 
 	// Reopen without urls.
 	assert.NoError(t, db.Close())
-	urls, db, err = Open[http.Cookie](slog.New(handler), "__db")
+	urls, db, err = Open[http.Cookie](slog.New(handler), "__db", false)
 	assert.Nil(t, urls)
 	assert.NoError(t, err)
 	assert.NoError(t, db.Close())
@@ -153,7 +153,7 @@ func TestForHTML(t *testing.T) {
 
 	defer os.RemoveAll("__db")
 	records, handler := sloghandlers.NewHandlerRecords(slog.InfoLevel)
-	urls, db, err := Open[http.Cookie](slog.New(handler), "__db")
+	urls, db, err := Open[http.Cookie](slog.New(handler), "__db", false)
 	assert.Nil(t, urls)
 	assert.NoError(t, err)
 	defer func() { assert.NoError(t, db.Close()) }()
@@ -202,7 +202,7 @@ func TestDBMemory(t *testing.T) {
 	key := NewKeyString("key")
 
 	records, handler := sloghandlers.NewHandlerRecords(slog.InfoLevel)
-	urls, db, err := OpenMemory[http.Cookie](slog.New(handler))
+	urls, db, err := OpenMemory[http.Cookie](slog.New(handler), "", false)
 	assert.Nil(t, urls)
 	assert.NoError(t, err)
 

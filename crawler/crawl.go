@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"context"
+	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"golang.org/x/exp/slog"
@@ -12,7 +13,11 @@ import (
 
 type Config struct {
 	// The database, DB or the root if DB is nil.
-	DB crawldatabase.Database[Page]
+	// DB crawldatabase.Database[Page]
+	DBopener func(logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, crawldatabase.Database[Page], error)
+	// The base path of the database.
+	// Argument of the DBopener.
+	DBbase string
 
 	// Root URL to begin to read
 	Input []*url.URL
@@ -35,6 +40,7 @@ type Config struct {
 	// Must: minCrawlDelay < maxCrawlDelay
 	MinCrawlDelay, MaxCrawlDelay time.Duration
 
+	// A simple logger to slog the database.
 	Logger *slog.Logger
 
 	// Use to fetch all HTTP ressource.
@@ -42,9 +48,14 @@ type Config struct {
 }
 
 func Crawl(mainContext context.Context, config Config) error {
+	_, db, err := config.DBopener(config.Logger, config.DBbase, true)
+	if err != nil {
+		return fmt.Errorf("Open the database with base=%q: %w", config.DBbase, err)
+	}
+
 	end := make(chan struct{})
 	fetchContext := &fetchContext{
-		db:            config.DB,
+		db:            db,
 		hosts:         make(map[string]*host),
 		end:           end,
 		maxGo:         config.MaxGo,

@@ -1,6 +1,7 @@
 package crawldatabase
 
 import (
+	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"golang.org/x/exp/slog"
 	"io"
 	"net/url"
@@ -10,7 +11,11 @@ import (
 // Open a database in the memory, so it not persistent.
 // Use only for test.
 // Always retuns nil for url slice and error.
-func OpenMemory[T any](logger *slog.Logger) ([]*url.URL, Database[T], error) {
+func OpenMemory[T any](logger *slog.Logger, _ string, _ bool) ([]*url.URL, Database[T], error) {
+	if logger == nil {
+		logger = slog.New(sloghandlers.NewNullHandler())
+	}
+
 	return nil, &database[T]{
 		logger:      logger,
 		statsTicker: &time.Ticker{},
