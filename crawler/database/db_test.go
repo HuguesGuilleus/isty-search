@@ -63,7 +63,7 @@ func TestDBFile(t *testing.T) {
 	assert.Error(t, db.SetSimple(ks, TypeFileRSS))
 	assert.NoError(t, db.SetSimple(ks, TypeErrorParsing))
 
-	meta := db.(*database[http.Cookie]).mapMeta[ks]
+	meta := db.mapMeta[ks]
 	assert.NotZero(t, meta.Time)
 	meta.Time = 0
 	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
@@ -71,15 +71,15 @@ func TestDBFile(t *testing.T) {
 	// Remove key
 	kd := NewKeyString("deleted")
 	assert.NoError(t, db.SetSimple(kd, TypeErrorParsing))
-	assert.NotZero(t, db.(*database[http.Cookie]).mapMeta[kd])
+	assert.NotZero(t, db.mapMeta[kd])
 	assert.NoError(t, db.SetSimple(kd, TypeNothing))
-	assert.Zero(t, db.(*database[http.Cookie]).mapMeta[kd])
+	assert.Zero(t, db.mapMeta[kd])
 
 	// Redirection
 	ko := NewKeyString("origin")
 	kt := NewKeyString("target")
 	assert.NoError(t, db.SetRedirect(ko, kt))
-	meta = db.(*database[http.Cookie]).mapMeta[ko]
+	meta = db.mapMeta[ko]
 	assert.NotZero(t, meta.Time)
 	meta.Time = 0
 	assert.Equal(t, metavalue{Type: TypeRedirect, Hash: kt}, meta)
@@ -104,14 +104,14 @@ func TestDBFile(t *testing.T) {
 	assert.False(t, storedTime.IsZero())
 
 	// Check simple
-	assert.Zero(t, db.(*database[http.Cookie]).mapMeta[kd])
-	meta = db.(*database[http.Cookie]).mapMeta[ks]
+	assert.Zero(t, db.mapMeta[kd])
+	meta = db.mapMeta[ks]
 	assert.NotZero(t, meta.Time)
 	meta.Time = 0
 	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
 
 	// Check redirect
-	meta = db.(*database[http.Cookie]).mapMeta[ko]
+	meta = db.mapMeta[ko]
 	assert.NotZero(t, meta.Time)
 	meta.Time = 0
 	assert.Equal(t, metavalue{Type: TypeRedirect, Hash: kt}, meta)
@@ -240,7 +240,7 @@ func TestDBMemory(t *testing.T) {
 	assert.Error(t, db.SetSimple(ks, TypeFileRSS))
 	assert.NoError(t, db.SetSimple(ks, TypeErrorParsing))
 
-	meta := db.(*database[http.Cookie]).mapMeta[ks]
+	meta := db.mapMeta[ks]
 	assert.NotZero(t, meta.Time)
 	meta.Time = 0
 	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
@@ -248,15 +248,15 @@ func TestDBMemory(t *testing.T) {
 	// Remove key
 	kd := NewKeyString("deleted")
 	assert.NoError(t, db.SetSimple(kd, TypeErrorParsing))
-	assert.NotZero(t, db.(*database[http.Cookie]).mapMeta[kd])
+	assert.NotZero(t, db.mapMeta[kd])
 	assert.NoError(t, db.SetSimple(kd, TypeNothing))
-	assert.Zero(t, db.(*database[http.Cookie]).mapMeta[kd])
+	assert.Zero(t, db.mapMeta[kd])
 
 	// Redirection
 	ko := NewKeyString("origin")
 	kt := NewKeyString("target")
 	assert.NoError(t, db.SetRedirect(ko, kt))
-	meta = db.(*database[http.Cookie]).mapMeta[ko]
+	meta = db.mapMeta[ko]
 	assert.NotZero(t, meta.Time)
 	meta.Time = 0
 	assert.Equal(t, metavalue{Type: TypeRedirect, Hash: kt}, meta)

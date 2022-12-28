@@ -6,7 +6,7 @@ import (
 )
 
 // Call each Page with a HTML from the database call is sequenticaly.
-func Process(db crawldatabase.Database[Page], logger *slog.Logger, processList ...interface{ Process(*Page) }) error {
+func Process(db *crawldatabase.Database[Page], logger *slog.Logger, processList ...interface{ Process(*Page) }) error {
 	defer logger.Info("%end")
 	return db.ForHTML(func(key crawldatabase.Key, page *Page, progress, total int) {
 		if page.Html == nil {

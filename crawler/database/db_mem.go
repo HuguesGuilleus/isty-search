@@ -11,12 +11,12 @@ import (
 // Open a database in the memory, so it not persistent.
 // Use only for test.
 // Always retuns nil for url slice and error.
-func OpenMemory[T any](logger *slog.Logger, _ string, _ bool) ([]*url.URL, Database[T], error) {
+func OpenMemory[T any](logger *slog.Logger, _ string, _ bool) ([]*url.URL, *Database[T], error) {
 	if logger == nil {
 		logger = slog.New(sloghandlers.NewNullHandler())
 	}
 
-	return nil, &database[T]{
+	return nil, &Database[T]{
 		logger:      logger,
 		statsTicker: &time.Ticker{},
 		base:        "$memory",

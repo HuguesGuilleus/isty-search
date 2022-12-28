@@ -14,7 +14,7 @@ import (
 type Config struct {
 	// The database, DB or the root if DB is nil.
 	// DB crawldatabase.Database[Page]
-	DBopener func(logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, crawldatabase.Database[Page], error)
+	DBopener func(logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, *crawldatabase.Database[Page], error)
 	// The base path of the database.
 	// Argument of the DBopener.
 	DBbase string

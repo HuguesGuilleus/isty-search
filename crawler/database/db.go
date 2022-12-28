@@ -19,48 +19,6 @@ import (
 	"time"
 )
 
-// A database object to store value and matadata (time) about a value.
-// All method other than Close can be used concurently.
-type Database[T any] interface {
-	// Add unknwon url.
-	// If the URL is known, is deleted of urls, else is saved is DB files.
-	// Error are logged and returned.
-	AddURL(map[Key]*url.URL) error
-
-	// Get the value from the DB.
-	// If the value if not a file, return NotFile.
-	// If the value do not exist, return NotExist.
-	// The time is the instant of value store.
-	GetValue(key Key) (*T, time.Time, error)
-
-	// Set the value to the DB, overwrite previous value.
-	// t must be a type of a regular file.
-	SetValue(key Key, value *T, t byte) error
-
-	// Set the redirection.
-	SetRedirect(key, destination Key) error
-
-	// Set in the DB a simple type: nothing, known or error.
-	// Is t is a file type, it return an error, and do not modify the DB.
-	SetSimple(key Key, t byte) error
-
-	// Iterate for each element of type TypeFileHTML.
-	// The in the logge rthe progression.
-	ForHTML(func(key Key, value *T, progress, total int)) error
-
-	// Return all redictions to valid file.
-	// If r1 -> r2 -> r3 -> p, the map contain:
-	//   - m[r1] = p
-	//   - m[r2] = p
-	//   - m[r3] = p
-	// The redirection chain is limited to 10.
-	Redirections() map[Key]Key
-
-	// Close the database.
-	// After close, call of database method can infinity block.
-	Close() error
-}
-
 var (
 	NotExist = errors.New("Not exist")
 	NotFile  = errors.New("This value is not a file")
@@ -72,7 +30,7 @@ const (
 	filenameData = "file-0.gz"
 )
 
-type database[T any] struct {
+type Database[T any] struct {
 	logger *slog.Logger
 
 	// A ticker to log DB stats at regular interval.
@@ -100,16 +58,16 @@ type fileInferface interface {
 }
 
 // Open the DB, and return all know URL.
-func OpenWithKnow[T any](logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, Database[T], error) {
+func OpenWithKnow[T any](logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, *Database[T], error) {
 	return open[T](logger, base, logStatistics, []byte{TypeKnow})
 }
 
 // Open the database but return no url.
-func Open[T any](logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, Database[T], error) {
+func Open[T any](logger *slog.Logger, base string, logStatistics bool) ([]*url.URL, *Database[T], error) {
 	return open[T](logger, base, logStatistics, nil)
 }
 
-func open[T any](logger *slog.Logger, base string, logStatistics bool, acceptedTypes []byte) ([]*url.URL, Database[T], error) {
+func open[T any](logger *slog.Logger, base string, logStatistics bool, acceptedTypes []byte) ([]*url.URL, *Database[T], error) {
 	base = filepath.Clean(base)
 	if err := os.MkdirAll(base, 0o775); err != nil {
 		logger.Error("db.open", err, "mkdir", base)
@@ -152,7 +110,7 @@ func open[T any](logger *slog.Logger, base string, logStatistics bool, acceptedT
 		}()
 	}
 
-	return urls, &database[T]{
+	return urls, &Database[T]{
 		logger:      logger,
 		statsTicker: statsTicker,
 		base:        base,
@@ -187,7 +145,9 @@ func readFile(logger *slog.Logger, base, name string) []byte {
 	return data
 }
 
-func (db *database[_]) Close() error {
+// Close the database.
+// After close, call of database method can infinity block.
+func (db *Database[_]) Close() error {
 	db.mutex.Lock() // Keep locked to block the database
 	db.statsTicker.Stop()
 
@@ -208,13 +168,17 @@ func (db *database[_]) Close() error {
 }
 
 // Return statistics of the database
-func (db *database[_]) Statistics() Statistics {
+func (db *Database[_]) Statistics() Statistics {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 	return getStatistics(db.mapMeta)
 }
 
-func (db *database[_]) AddURL(urls map[Key]*url.URL) error {
+// Add unknwon url.
+//
+// If the URL is known, is deleted of urls, else is saved in DB files.
+// Error are logged and returned.
+func (db *Database[_]) AddURL(urls map[Key]*url.URL) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -241,7 +205,11 @@ func (db *database[_]) AddURL(urls map[Key]*url.URL) error {
 	return nil
 }
 
-func (db *database[T]) GetValue(key Key) (*T, time.Time, error) {
+// Get the value from the DB.
+// If the value if not a file, return NotFile.
+// If the value do not exist, return NotExist.
+// The time is the instant of value store.
+func (db *Database[T]) GetValue(key Key) (*T, time.Time, error) {
 	meta := db.getMetavalue(key)
 	if meta.Type == TypeNothing {
 		return nil, time.Time{}, NotExist
@@ -256,7 +224,7 @@ func (db *database[T]) GetValue(key Key) (*T, time.Time, error) {
 	return value, time.Unix(meta.Time, 0), nil
 }
 
-func (db *database[T]) readValue(key Key, meta metavalue) (*T, error) {
+func (db *Database[T]) readValue(key Key, meta metavalue) (*T, error) {
 	// Read the data chunck
 	data := make([]byte, int(meta.Length))
 	_, err := db.dataFile.ReadAt(data, meta.Position)
@@ -295,13 +263,15 @@ func (db *database[T]) readValue(key Key, meta metavalue) (*T, error) {
 	return value, nil
 }
 
-func (db *database[_]) getMetavalue(key Key) metavalue {
+func (db *Database[_]) getMetavalue(key Key) metavalue {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 	return db.mapMeta[key]
 }
 
-func (db *database[T]) SetValue(key Key, value *T, t byte) error {
+// Set the value to the DB, overwrite previous value.
+// t must be a type of a regular file.
+func (db *Database[T]) SetValue(key Key, value *T, t byte) error {
 	if t < TypeFile || t >= TypeError {
 		return fmt.Errorf("DB.SetValue(key=%s): The type %d is not for a file", key, t)
 	} else if value == nil {
@@ -348,7 +318,9 @@ func (db *database[T]) SetValue(key Key, value *T, t byte) error {
 	return nil
 }
 
-func (db *database[_]) SetSimple(key Key, t byte) error {
+// Set in the DB a simple type: nothing, known or error.
+// Is t is a file type, it return an error, and do not modify the DB.
+func (db *Database[_]) SetSimple(key Key, t byte) error {
 	if TypeFile <= t && t < TypeError {
 		return fmt.Errorf("Db.SetSimple(key=%s, type=%d) use forbiden type file", key, t)
 	}
@@ -375,7 +347,8 @@ func (db *database[_]) SetSimple(key Key, t byte) error {
 	return nil
 }
 
-func (db *database[_]) SetRedirect(key, destination Key) error {
+// Set the redirection.
+func (db *Database[_]) SetRedirect(key, destination Key) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -392,7 +365,10 @@ func (db *database[_]) SetRedirect(key, destination Key) error {
 	return nil
 }
 
-func (db *database[T]) ForHTML(f func(Key, *T, int, int)) error {
+// Iterate for each element of type TypeFileHTML.
+//
+// Log the progession with the intern logger.
+func (db *Database[T]) ForHTML(f func(Key, *T, int, int)) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -422,7 +398,14 @@ func (db *database[T]) ForHTML(f func(Key, *T, int, int)) error {
 	return nil
 }
 
-func (db *database[_]) Redirections() map[Key]Key {
+// Return all redictions to valid file.
+// If r1 -> r2 -> r3 -> p, the map contain:
+//   - m[r1] = p
+//   - m[r2] = p
+//   - m[r3] = p
+//
+// The redirection chain is limited to 10.
+func (db *Database[_]) Redirections() map[Key]Key {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -450,7 +433,7 @@ func (db *database[_]) Redirections() map[Key]Key {
 	return m
 }
 
-func (db *database[_]) setmeta(key Key, meta metavalue) error {
+func (db *Database[_]) setmeta(key Key, meta metavalue) error {
 	if err := writeElasticMetavalue(key, meta, db.metaFile); err != nil {
 		db.logerror("write.meta", key, err)
 		return fmt.Errorf("write meta: %w", err)
@@ -459,6 +442,6 @@ func (db *database[_]) setmeta(key Key, meta metavalue) error {
 }
 
 // The log error.
-func (db *database[_]) logerror(op string, key Key, err error) {
+func (db *Database[_]) logerror(op string, key Key, err error) {
 	db.logger.Error("db.error", err, "op", op, "key", key.String())
 }

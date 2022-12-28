@@ -13,7 +13,7 @@ const robotsPath = "/robots.txt"
 const faviconPath = "/favicon.ico"
 
 // Get once the robots file. See robotGet for details.
-func robotGetter(db crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) func() *robotstxt.File {
+func robotGetter(db *crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) func() *robotstxt.File {
 	robot := robotstxt.File{}
 	todo := true
 	return func() *robotstxt.File {
@@ -28,7 +28,7 @@ func robotGetter(db crawldatabase.Database[Page], scheme, host string, roundTrip
 // RobotGetter load it, or download and store it from the objectDB.
 // On error (from cache or when download), use robotstxt.DefaultRobots.
 // If cache is more than 24h, dowload it.
-func robotGet(db crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) robotstxt.File {
+func robotGet(db *crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) robotstxt.File {
 	u := url.URL{
 		Scheme: scheme,
 		Host:   host,

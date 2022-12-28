@@ -25,7 +25,7 @@ func TestCrawl(t *testing.T) {
 
 	_, db, _ := crawldatabase.OpenMemory[Page](logger, "", false)
 	err := Crawl(context.Background(), Config{
-		DBopener: func(argLogger *slog.Logger, base string, logStatistics bool) ([]*url.URL, crawldatabase.Database[Page], error) {
+		DBopener: func(argLogger *slog.Logger, base string, logStatistics bool) ([]*url.URL, *crawldatabase.Database[Page], error) {
 			assert.Equal(t, logger, argLogger)
 			assert.Equal(t, "$db-base$", base)
 			assert.True(t, logStatistics)

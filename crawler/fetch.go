@@ -18,7 +18,7 @@ import (
 var tooRedirect = errors.New("Too redirect")
 
 type fetchContext struct {
-	db crawldatabase.Database[Page]
+	db *crawldatabase.Database[Page]
 
 	// The Hosts, a map to store all urls that will be crawled.
 	// The key is generate by createKey().
