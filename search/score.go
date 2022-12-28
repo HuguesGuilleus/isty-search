@@ -1,12 +1,12 @@
 package search
 
 import (
-	"github.com/HuguesGuilleus/isty-search/crawler/db"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"sort"
 )
 
 type Score struct {
-	Key  db.Key
+	Key  crawldatabase.Key
 	Rank float32
 }
 

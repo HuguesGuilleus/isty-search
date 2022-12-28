@@ -4,31 +4,34 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler"
-	"github.com/HuguesGuilleus/isty-search/crawler/db"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"sort"
 )
 
 type PageRank struct {
-	links map[db.Key][]db.Key
-	urls  map[db.Key]string // only for dev
+	links map[crawldatabase.Key][]crawldatabase.Key
+	urls  map[crawldatabase.Key]string // only for dev
 }
 
 func NewPageRank() PageRank {
 	return PageRank{
-		links: make(map[db.Key][]db.Key),
-		urls:  make(map[db.Key]string),
+		links: make(map[crawldatabase.Key][]crawldatabase.Key),
+		urls:  make(map[crawldatabase.Key]string),
 	}
 }
 
-func (pr *PageRank) Process(page *crawler.Page) {
-	urls := page.Html.GetURL(&page.URL)
+// crawldatabase
 
-	links := make([]db.Key, len(urls))
-	for i, u := range urls {
-		links[i] = db.NewURLKey(u)
+func (pr *PageRank) Process(page *crawler.Page) {
+	urls := page.GetURLs()
+	links := make([]crawldatabase.Key, len(urls))
+	i := 0
+	for key := range urls {
+		links[i] = key
+		i++
 	}
-	pr.links[db.NewURLKey(&page.URL)] = links
-	pr.urls[db.NewURLKey(&page.URL)] = page.URL.String()
+	pr.links[crawldatabase.NewKeyURL(&page.URL)] = links
+	pr.urls[crawldatabase.NewKeyURL(&page.URL)] = page.URL.String()
 }
 
 // Run pr.Score(), sort the result and print beter line.
@@ -47,8 +50,8 @@ func (pr *PageRank) DevScore() {
 func (pr *PageRank) Score(repeat int) []Score {
 	pr.filterKey()
 
-	key2index := make(map[db.Key]int, len(pr.links))
-	index2key := make([]db.Key, len(pr.links))
+	key2index := make(map[crawldatabase.Key]int, len(pr.links))
+	index2key := make([]crawldatabase.Key, len(pr.links))
 	i := 0
 	for key := range pr.links {
 		index2key[i] = key
@@ -83,7 +86,7 @@ func (pr *PageRank) filterKey() {
 	for key, links := range pr.links {
 		i := 0
 		sort.Slice(links, func(i, j int) bool { return bytes.Compare(links[i][:], links[j][:]) < 0 })
-		previous := db.Key{}
+		previous := crawldatabase.Key{}
 		for _, linkKey := range links {
 			if _, exist := pr.links[linkKey]; !exist || key == linkKey || bytes.Equal(previous[:], linkKey[:]) {
 				continue

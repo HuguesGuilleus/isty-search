@@ -2,22 +2,22 @@ package search
 
 import (
 	"fmt"
-	"github.com/HuguesGuilleus/isty-search/crawler/db"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 )
 
 var (
-	pageA = db.NewStringKey("page:a")
-	pageB = db.NewStringKey("page:b")
-	pageC = db.NewStringKey("page:c")
-	pageD = db.NewStringKey("page:d")
-	pageX = db.NewStringKey("page:x")
-	pageY = db.NewStringKey("page:y")
+	pageA = crawldatabase.NewKeyString("page:a")
+	pageB = crawldatabase.NewKeyString("page:b")
+	pageC = crawldatabase.NewKeyString("page:c")
+	pageD = crawldatabase.NewKeyString("page:d")
+	pageX = crawldatabase.NewKeyString("page:x")
+	pageY = crawldatabase.NewKeyString("page:y")
 )
 
-func keyStringer(key db.Key) string {
+func keyStringer(key crawldatabase.Key) string {
 	switch key {
 	case pageA:
 		return "<pageA>"
@@ -38,7 +38,7 @@ func keyStringer(key db.Key) string {
 
 func TestPageRank(t *testing.T) {
 	pr := PageRank{
-		links: map[db.Key][]db.Key{
+		links: map[crawldatabase.Key][]crawldatabase.Key{
 			pageA: {pageC},
 			pageB: {pageA, pageX, pageA},
 			pageC: {pageA, pageY},
@@ -69,7 +69,7 @@ func TestPageRank(t *testing.T) {
 
 func TestPageRankFilter(t *testing.T) {
 	pr := PageRank{
-		links: map[db.Key][]db.Key{
+		links: map[crawldatabase.Key][]crawldatabase.Key{
 			pageA: {pageC},
 			pageB: {pageA, pageX, pageA},
 			pageC: {pageA, pageY},
@@ -78,14 +78,14 @@ func TestPageRankFilter(t *testing.T) {
 	}
 	pr.filterKey()
 
-	expected := map[db.Key][]db.Key{
+	expected := map[crawldatabase.Key][]crawldatabase.Key{
 		pageA: {pageC},
 		pageB: {pageA},
 		pageC: {pageA},
 		pageD: {pageB},
 	}
 	if !reflect.DeepEqual(expected, pr.links) {
-		print := func(m map[db.Key][]db.Key) {
+		print := func(m map[crawldatabase.Key][]crawldatabase.Key) {
 			t.Logf("map len: %d", len(m))
 			for key, links := range m {
 				t.Log("\tkey:", keyStringer(key))
