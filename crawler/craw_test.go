@@ -25,16 +25,17 @@ func TestCrawl(t *testing.T) {
 	logger := slog.New(logHandler)
 
 	_, db, _ := crawldatabase.OpenMemory[Page](logger, "", false)
+	db.SetSimple(crawldatabase.NewKeyString("https://example.org/known.html"), crawldatabase.TypeKnow)
 	err := Crawl(context.Background(), Config{
 		DBopener: func(argLogger *slog.Logger, base string, logStatistics bool) ([]*url.URL, *crawldatabase.Database[Page], error) {
 			assert.Equal(t, logger, argLogger)
 			assert.Equal(t, "$db-base$", base)
 			assert.True(t, logStatistics)
-			return nil, db, nil
+			return common.ParseURLs("https://example.org/known.html"), db, nil
 		},
 		DBbase: "$db-base$",
 
-		Input: []*url.URL{common.ParseURL("https://example.org/")},
+		Input: common.ParseURLs("https://example.org/"),
 		FilterURL: []func(*url.URL) bool{
 			func(u *url.URL) bool { return u.Host != "example.org" },
 		},
@@ -56,6 +57,7 @@ func TestCrawl(t *testing.T) {
 		`INFO [fetch.ok] status=200 url=https://example.org/dir/`,
 		`INFO [fetch.ok] status=200 url=https://example.org/dir/subdir/`,
 		`INFO [fetch.ok] status=200 url=https://example.org/es.html`,
+		`INFO [fetch.ok] status=200 url=https://example.org/known.html`,
 		`INFO [fetch.ok] status=200 url=https://example.org/redirected.html`,
 		`INFO [fetch.ok] status=200 url=https://example.org/robots.txt`,
 		`INFO [fetch.ok] status=308 url=https://example.org/redirection`,
@@ -89,14 +91,14 @@ func TestCrawl(t *testing.T) {
 			crawldatabase.TypeKnow:            1, // the favicon
 			crawldatabase.TypeRedirect:        1,
 			crawldatabase.TypeFileRobots:      1,
-			crawldatabase.TypeFileHTML:        4,
+			crawldatabase.TypeFileHTML:        5,
 			crawldatabase.TypeErrorNetwork:    2,
 			crawldatabase.TypeErrorFilterURL:  3, // google(x2)+www.exemple
 			crawldatabase.TypeErrorFilterPage: 1,
 			crawldatabase.TypeErrorRobot:      1,
 		},
-		Total:      14,
-		TotalFile:  5,
+		Total:      15,
+		TotalFile:  6,
 		TotalError: 7,
 	}, stats)
 
@@ -113,6 +115,7 @@ func TestCrawl(t *testing.T) {
 		"https://example.org/",
 		"https://example.org/dir/",
 		"https://example.org/dir/subdir/",
+		"https://example.org/known.html",
 		"https://example.org/redirected.html",
 	}, foundURL)
 }

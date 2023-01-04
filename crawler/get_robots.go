@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"context"
 	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
@@ -13,13 +14,13 @@ const robotsPath = "/robots.txt"
 const faviconPath = "/favicon.ico"
 
 // Get once the robots file. See robotGet for details.
-func robotGetter(db *crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) func() *robotstxt.File {
+func robotGetter(ctx context.Context, db *crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) func() *robotstxt.File {
 	robot := robotstxt.File{}
 	todo := true
 	return func() *robotstxt.File {
 		if todo {
 			todo = false
-			robot = robotGet(db, scheme, host, roundTripper)
+			robot = robotGet(ctx, db, scheme, host, roundTripper)
 		}
 		return &robot
 	}
@@ -28,7 +29,7 @@ func robotGetter(db *crawldatabase.Database[Page], scheme, host string, roundTri
 // RobotGetter load it, or download and store it from the objectDB.
 // On error (from cache or when download), use robotstxt.DefaultRobots.
 // If cache is more than 24h, dowload it.
-func robotGet(db *crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) robotstxt.File {
+func robotGet(ctx context.Context, db *crawldatabase.Database[Page], scheme, host string, roundTripper http.RoundTripper) robotstxt.File {
 	u := url.URL{
 		Scheme: scheme,
 		Host:   host,
@@ -45,7 +46,7 @@ func robotGet(db *crawldatabase.Database[Page], scheme, host string, roundTrippe
 	}
 
 	robots := robotstxt.DefaultRobots
-	if buff := fetchMultiple(roundTripper, 500_1024, &u, 5); buff != nil {
+	if buff := fetchMultiple(ctx, roundTripper, 500_1024, &u, 5); buff != nil {
 		robots = robotstxt.Parse(buff.Bytes())
 		common.RecycleBuffer(buff)
 	}

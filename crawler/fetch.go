@@ -24,17 +24,14 @@ type fetchContext struct {
 	hosts      map[string]*host
 	hostsMutex sync.Mutex
 
-	// Channel to signal crawl end.
-	end chan<- struct{}
-	// Ask to close.
-	close bool
-	// Done when all crawl goroutine return.
-	wg sync.WaitGroup
-
+	// A parent context
+	context context.Context
 	// Number of current crawl goroutine.
 	lenGo int
 	// Maximum of crawl goroutine
 	maxGo int
+	// Done when all crawl goroutine return.
+	wg sync.WaitGroup
 
 	filterURL  []func(*url.URL) bool
 	filterPage []func(*htmlnode.Root) bool
@@ -77,7 +74,7 @@ func (ctx *fetchContext) crawlHost(h *host) {
 	for _, u := range urls {
 		ctx.sleep(crawDelay)
 		ctx.fetchOne(u)
-		if ctx.close {
+		if ctx.context.Err() != nil {
 			return
 		}
 	}
@@ -96,21 +93,13 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 		}
 	}
 
-	fetching := false
 	for _, h := range ctx.hosts {
-		if h.fetching {
-			fetching = true
-		} else {
+		if !h.fetching {
 			h.fetching = true
 			returnedHost := *h
 			h.urls = nil
 			return &returnedHost
 		}
-	}
-
-	if !fetching {
-		ctx.end <- struct{}{}
-		close(ctx.end)
 	}
 
 	ctx.lenGo--
@@ -161,7 +150,7 @@ func (ctx *fetchContext) fetchOne(u *url.URL) {
 	key := crawldatabase.NewKeyURL(u)
 
 	// Get the body
-	body, redirect, errString := fetchBytes(ctx.roundTripper, ctx.maxLength, u)
+	body, redirect, errString := fetchBytes(ctx.context, ctx.roundTripper, ctx.maxLength, u)
 	if errString {
 		ctx.db.SetSimple(key, crawldatabase.TypeErrorNetwork)
 		return
@@ -214,7 +203,7 @@ func (ctx *fetchContext) fetchOne(u *url.URL) {
 // - Filtered
 // - Blocked by robots.
 func (ctx *fetchContext) strikeURLs(h *host) ([]*url.URL, int) {
-	robotsGetter := robotGetter(ctx.db, h.scheme, h.host, ctx.roundTripper)
+	robotsGetter := robotGetter(ctx.context, ctx.db, h.scheme, h.host, ctx.roundTripper)
 	validURLs := make([]*url.URL, 0, len(h.urls))
 
 urlFor:
@@ -256,20 +245,23 @@ func (ctx *fetchContext) sleep(crawDelay int) {
 	if delay > ctx.maxCrawlDelay {
 		delay = ctx.maxCrawlDelay
 	}
-	time.Sleep(delay)
+
+	timeoutContext, cancel := context.WithTimeout(ctx.context, delay)
+	defer cancel()
+	<-timeoutContext.Done()
 }
 
 // Fetch until the redirection is over maxRedirect.
 // Used my robotGet()
-func fetchMultiple(roundTripper http.RoundTripper, maxLength int64, u *url.URL, maxRedirect int) (buff *bytes.Buffer) {
+func fetchMultiple(ctx context.Context, roundTripper http.RoundTripper, maxLength int64, u *url.URL, maxRedirect int) (buff *bytes.Buffer) {
 	for i := 0; i < maxRedirect && u != nil; i++ {
-		buff, u, _ = fetchBytes(roundTripper, maxLength, u)
+		buff, u, _ = fetchBytes(ctx, roundTripper, maxLength, u)
 	}
 	return
 }
 
 // Fetch the url, and return: the body, the redirect URL or the error.
-func fetchBytes(roundTripper http.RoundTripper, maxLength int64, u *url.URL) (*bytes.Buffer, *url.URL, bool) {
+func fetchBytes(ctx context.Context, roundTripper http.RoundTripper, maxLength int64, u *url.URL) (*bytes.Buffer, *url.URL, bool) {
 	if h := u.Host; strings.LastIndex(h, ":") > strings.LastIndex(h, "]") {
 		u.Host = strings.TrimSuffix(h, ":")
 	}
@@ -283,7 +275,7 @@ func fetchBytes(roundTripper http.RoundTripper, maxLength int64, u *url.URL) (*b
 		Header:     make(http.Header),
 		Host:       u.Host,
 	}
-	request.WithContext(context.Background())
+	request.WithContext(ctx)
 	response, err := roundTripper.RoundTrip(&request)
 
 	if err != nil {

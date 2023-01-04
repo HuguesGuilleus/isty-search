@@ -48,16 +48,15 @@ type Config struct {
 }
 
 func Crawl(mainContext context.Context, config Config) error {
-	_, db, err := config.DBopener(config.Logger, config.DBbase, true)
+	urlsFromDB, db, err := config.DBopener(config.Logger, config.DBbase, true)
 	if err != nil {
 		return fmt.Errorf("Open the database with base=%q: %w", config.DBbase, err)
 	}
 
-	end := make(chan struct{})
 	fetchContext := &fetchContext{
 		db:            db,
 		hosts:         make(map[string]*host),
-		end:           end,
+		context:       mainContext,
 		maxGo:         config.MaxGo,
 		filterURL:     config.FilterURL,
 		filterPage:    config.FilterPage,
@@ -68,27 +67,21 @@ func Crawl(mainContext context.Context, config Config) error {
 	}
 	defer fetchContext.wg.Wait()
 
-	if len(config.Input) == 0 {
-		return nil
-	}
-
-	dbUrls := make(map[crawldatabase.Key]*url.URL, len(config.Input))
+	urls4db := make(map[crawldatabase.Key]*url.URL, len(config.Input))
+	urls4plan := make(map[crawldatabase.Key]*url.URL, len(config.Input))
 	for _, u := range config.Input {
-		dbUrls[crawldatabase.NewKeyURL(u)] = u
+		key := crawldatabase.NewKeyURL(u)
+		urls4plan[key] = u
+		urls4db[key] = u
 	}
-	fetchContext.db.AddURL(dbUrls)
+	fetchContext.db.AddURL(urls4db)
+	fetchContext.planURLs(urls4plan)
 
-	urls := make(map[crawldatabase.Key]*url.URL, len(config.Input))
-	for _, u := range config.Input {
-		urls[crawldatabase.NewKeyURL(u)] = u
+	urlsFromDBMap := make(map[crawldatabase.Key]*url.URL, len(config.Input))
+	for _, u := range urlsFromDB {
+		urlsFromDBMap[crawldatabase.NewKeyURL(u)] = u
 	}
-	fetchContext.planURLs(urls)
-
-	select {
-	case <-end:
-	case <-mainContext.Done():
-		fetchContext.close = true
-	}
+	fetchContext.planURLs(urlsFromDBMap)
 
 	return nil
 }
