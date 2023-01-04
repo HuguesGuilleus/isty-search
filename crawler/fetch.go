@@ -73,7 +73,7 @@ func (ctx *fetchContext) crawlHost(h *host) {
 		}
 	}()
 
-	urls, crawDelay := ctx.strikeURLs(h.scheme, h.host, h.urls)
+	urls, crawDelay := ctx.strikeURLs(h)
 	for _, u := range urls {
 		ctx.sleep(crawDelay)
 		ctx.fetchOne(u)
@@ -213,12 +213,12 @@ func (ctx *fetchContext) fetchOne(u *url.URL) {
 // - The path is "/robots.txt" or "/favicon.ico"
 // - Filtered
 // - Blocked by robots.
-func (ctx *fetchContext) strikeURLs(scheme, host string, urls []*url.URL) ([]*url.URL, int) {
-	robotsGetter := robotGetter(ctx.db, scheme, host, ctx.roundTripper)
-	validURLs := make([]*url.URL, 0, len(urls))
+func (ctx *fetchContext) strikeURLs(h *host) ([]*url.URL, int) {
+	robotsGetter := robotGetter(ctx.db, h.scheme, h.host, ctx.roundTripper)
+	validURLs := make([]*url.URL, 0, len(h.urls))
 
 urlFor:
-	for _, u := range urls {
+	for _, u := range h.urls {
 		switch u.Path {
 		case robotsPath, faviconPath:
 			continue urlFor
