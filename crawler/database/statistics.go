@@ -82,20 +82,28 @@ func (stats Statistics) LogAll(logger *slog.Logger) {
 		if name == "" {
 			continue
 		}
+		percent := 0
+		if stats.Total > 0 {
+			percent = stats.Count[t] * 100 / stats.Total
+		}
 		logger.Info("db.stats.count",
 			"count", stats.Count[t],
-			"percent", stats.Count[t]*100/stats.Total,
+			"percent", percent,
 			"type", name)
 	}
 
-	logger.Info("db.stats.size", "total", 20)
+	logger.Info("db.stats.size", "total", stats.TotalFileSize)
 	for t, name := range type2name[:TypeErrorNetwork] {
 		if byte(t) < TypeFileRobots || name == "" {
 			continue
 		}
+		percent := int64(0)
+		if stats.TotalFileSize > 0 {
+			percent = stats.FileSize[t] * 100 / stats.TotalFileSize
+		}
 		logger.Info("db.stats.size",
 			"size", stats.FileSize[t],
-			"percent", stats.FileSize[t]*100/stats.TotalFileSize,
+			"percent", percent,
 			"type", name)
 	}
 }
