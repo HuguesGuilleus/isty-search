@@ -3,7 +3,6 @@ package crawler
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
@@ -12,11 +11,10 @@ import (
 	"net/http"
 	"net/url"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 )
-
-var tooRedirect = errors.New("Too redirect")
 
 type fetchContext struct {
 	db *crawldatabase.Database[Page]
@@ -163,8 +161,8 @@ func (ctx *fetchContext) fetchOne(u *url.URL) {
 	key := crawldatabase.NewKeyURL(u)
 
 	// Get the body
-	body, redirect, errString := fetchBytes(u, ctx.roundTripper, 1, ctx.maxLength)
-	if errString != "" {
+	body, redirect, errString := fetchBytes(ctx.roundTripper, ctx.maxLength, u)
+	if errString {
 		ctx.db.SetSimple(key, crawldatabase.TypeErrorNetwork)
 		return
 	} else if redirect != nil {
@@ -261,53 +259,72 @@ func (ctx *fetchContext) sleep(crawDelay int) {
 	time.Sleep(delay)
 }
 
+// Fetch until the redirection is over maxRedirect.
+// Used my robotGet()
+func fetchMultiple(roundTripper http.RoundTripper, maxLength int64, u *url.URL, maxRedirect int) (buff *bytes.Buffer) {
+	for i := 0; i < maxRedirect && u != nil; i++ {
+		buff, u, _ = fetchBytes(roundTripper, maxLength, u)
+	}
+	return
+}
+
 // Fetch the url, and return: the body, the redirect URL or the error.
-func fetchBytes(u *url.URL, roundTripper http.RoundTripper, maxRedirect int, maxBody int64) (*bytes.Buffer, *url.URL, string) {
-	request, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
-	response, err := roundTripper.RoundTrip(request)
+func fetchBytes(roundTripper http.RoundTripper, maxLength int64, u *url.URL) (*bytes.Buffer, *url.URL, bool) {
+	if h := u.Host; strings.LastIndex(h, ":") > strings.LastIndex(h, "]") {
+		u.Host = strings.TrimSuffix(h, ":")
+	}
+
+	request := http.Request{
+		Method:     http.MethodGet,
+		URL:        u,
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Header:     make(http.Header),
+		Host:       u.Host,
+	}
+	request.WithContext(context.Background())
+	response, err := roundTripper.RoundTrip(&request)
 
 	if err != nil {
-		if errors.Is(err, tooRedirect) {
-			return getLocation(u, response)
-		}
-		return nil, nil, err.Error()
+		return nil, nil, true
 	}
 	defer response.Body.Close()
 
 	if code := response.StatusCode / 100; code == 3 {
 		return getLocation(u, response)
 	} else if code != 2 {
-		return nil, nil, "http error:" + response.Status
+		return nil, nil, true
 	}
 
 	buff := common.GetBuffer()
-	if l := response.ContentLength; l > 0 && l < maxBody {
+	if l := response.ContentLength; l > 0 && l < maxLength {
 		buff.Grow(int(l))
 	} else {
-		buff.Grow(int(maxBody))
+		buff.Grow(int(maxLength))
 	}
-	if _, err := buff.ReadFrom(io.LimitReader(response.Body, maxBody)); err != nil {
+	if _, err := buff.ReadFrom(io.LimitReader(response.Body, maxLength)); err != nil {
 		common.RecycleBuffer(buff)
-		return nil, nil, err.Error()
+		return nil, nil, true
 	}
 
-	return buff, nil, ""
+	return buff, nil, false
 }
 
 // Get the location from response headers.
 // The bytes buffer is allways nil.
-func getLocation(u *url.URL, response *http.Response) (*bytes.Buffer, *url.URL, string) {
+func getLocation(u *url.URL, response *http.Response) (*bytes.Buffer, *url.URL, bool) {
 	redirectString := response.Header.Get("Location")
 	if redirectString == "" {
-		return nil, nil, "redirect without URL"
+		return nil, nil, true
 	}
 	redirect, err := u.Parse(redirectString)
 	if err != nil {
-		return nil, nil, "redirect with wrong syntax"
+		return nil, nil, true
 	}
-	redirect.RawQuery = redirect.Query().Encode()
+	cleanURL(redirect)
 	if redirect.String() == u.String() {
-		return nil, nil, "redirect to the same url"
+		return nil, nil, true
 	}
-	return nil, redirect, ""
+	return nil, redirect, false
 }

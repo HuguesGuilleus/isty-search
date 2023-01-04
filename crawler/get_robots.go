@@ -45,7 +45,7 @@ func robotGet(db *crawldatabase.Database[Page], scheme, host string, roundTrippe
 	}
 
 	robots := robotstxt.DefaultRobots
-	if buff, _, _ := fetchBytes(&u, roundTripper, 5, 500_1024); buff != nil {
+	if buff := fetchMultiple(roundTripper, 500_1024, &u, 5); buff != nil {
 		robots = robotstxt.Parse(buff.Bytes())
 		common.RecycleBuffer(buff)
 	}

@@ -42,10 +42,7 @@ func (page *Page) GetURLs() map[crawldatabase.Key]*url.URL {
 // Get all parent of the srouce url (no query, path parent, and path host.)
 func getParentURL(urls map[crawldatabase.Key]*url.URL, src *url.URL) {
 	// Source
-	src.User = nil
-	src.Fragment = ""
-	src.ForceQuery = false
-	src.RawQuery = src.Query().Encode()
+	cleanURL(src)
 	urls[crawldatabase.NewKeyURL(src)] = src
 
 	// No query
@@ -87,4 +84,12 @@ func getParentURL(urls map[crawldatabase.Key]*url.URL, src *url.URL) {
 func cloneURL(src *url.URL) *url.URL {
 	u := *src
 	return &u
+}
+
+// Clean url (remove user+fragment, sort query)
+func cleanURL(u *url.URL) {
+	u.User = nil
+	u.Fragment = ""
+	u.ForceQuery = false
+	u.RawQuery = u.Query().Encode()
 }
