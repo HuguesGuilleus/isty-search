@@ -51,6 +51,7 @@ func TestCrawl(t *testing.T) {
 	// Test log records
 	sort.Strings(*records)
 	assert.Equal(t, []string{
+		`INFO [fetch.err] err=FATAL url=https://example.org/err-fatal`,
 		`INFO [fetch.ok] status=200 url=https://example.org/`,
 		`INFO [fetch.ok] status=200 url=https://example.org/dir/`,
 		`INFO [fetch.ok] status=200 url=https://example.org/dir/subdir/`,
@@ -58,6 +59,7 @@ func TestCrawl(t *testing.T) {
 		`INFO [fetch.ok] status=200 url=https://example.org/redirected.html`,
 		`INFO [fetch.ok] status=200 url=https://example.org/robots.txt`,
 		`INFO [fetch.ok] status=308 url=https://example.org/redirection`,
+		`INFO [fetch.ok] status=404 url=https://example.org/err-404`,
 	}, *records)
 
 	// Test page
@@ -77,6 +79,26 @@ func TestCrawl(t *testing.T) {
 		assert.Equal(t, root.Head.PrintLines(), page.Html.Head.PrintLines())
 		assert.Equal(t, root.Body.PrintLines(), page.Html.Body.PrintLines())
 	}
+
+	// Test with statistics
+	stats := db.Statistics()
+	stats.TotalFileSize = 0
+	stats.FileSize = [crawldatabase.TypeError]int64{}
+	assert.Equal(t, crawldatabase.Statistics{
+		Count: [256]int{
+			crawldatabase.TypeKnow:            1, // the favicon
+			crawldatabase.TypeRedirect:        1,
+			crawldatabase.TypeFileRobots:      1,
+			crawldatabase.TypeFileHTML:        4,
+			crawldatabase.TypeErrorNetwork:    2,
+			crawldatabase.TypeErrorFilterURL:  3, // google(x2)+www.exemple
+			crawldatabase.TypeErrorFilterPage: 1,
+			crawldatabase.TypeErrorRobot:      1,
+		},
+		Total:      14,
+		TotalFile:  5,
+		TotalError: 7,
+	}, stats)
 
 	// Test the process
 	foundURL := []string{}
@@ -125,6 +147,22 @@ func (_ datatestRoundTripper) RoundTrip(request *http.Request) (*http.Response, 
 				http.CanonicalHeaderKey("Location"): []string{"https://example.org/redirected.html"},
 			},
 			Request: request,
+		}, nil
+	} else if path == "/err-fatal" {
+		return nil, fmt.Errorf("FATAL")
+	} else if path == "/err-404" {
+		return &http.Response{
+			Status:     http.StatusText(http.StatusNotFound),
+			StatusCode: http.StatusNotFound,
+
+			Proto:      request.Proto,
+			ProtoMajor: request.ProtoMajor,
+			ProtoMinor: request.ProtoMinor,
+
+			Close:         true,
+			ContentLength: 0,
+			Body:          io.NopCloser(bytes.NewReader(nil)),
+			Request:       request,
 		}, nil
 	}
 
