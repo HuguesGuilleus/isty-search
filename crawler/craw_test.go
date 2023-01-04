@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"fmt"
 	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
@@ -54,7 +55,9 @@ func TestCrawl(t *testing.T) {
 		`INFO [fetch.ok] status=200 url=https://example.org/dir/`,
 		`INFO [fetch.ok] status=200 url=https://example.org/dir/subdir/`,
 		`INFO [fetch.ok] status=200 url=https://example.org/es.html`,
+		`INFO [fetch.ok] status=200 url=https://example.org/redirected.html`,
 		`INFO [fetch.ok] status=200 url=https://example.org/robots.txt`,
+		`INFO [fetch.ok] status=308 url=https://example.org/redirection`,
 	}, *records)
 
 	// Test page
@@ -88,6 +91,7 @@ func TestCrawl(t *testing.T) {
 		"https://example.org/",
 		"https://example.org/dir/",
 		"https://example.org/dir/subdir/",
+		"https://example.org/redirected.html",
 	}, foundURL)
 }
 
@@ -99,16 +103,35 @@ type datatestRoundTripper struct{}
 func (_ datatestRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
 	if request.Method != http.MethodGet {
 		panic("Method not allowed")
-	}
-
-	if request.Host != "example.org" {
-		panic("no example.com host")
+	} else if request.Host != "example.org" {
+		panic(fmt.Sprintf(`Wrong host %q, expected "example.org"`, request.Host))
 	}
 
 	path := request.URL.Path
+	if path == "/redirection" {
+		return &http.Response{
+			Status:     http.StatusText(http.StatusPermanentRedirect),
+			StatusCode: http.StatusPermanentRedirect,
+
+			Proto:      request.Proto,
+			ProtoMajor: request.ProtoMajor,
+			ProtoMinor: request.ProtoMinor,
+
+			Close:         true,
+			ContentLength: 0,
+			Body:          io.NopCloser(bytes.NewReader(nil)),
+
+			Header: http.Header{
+				http.CanonicalHeaderKey("Location"): []string{"https://example.org/redirected.html"},
+			},
+			Request: request,
+		}, nil
+	}
+
 	if strings.HasSuffix(path, "/") {
 		path += "index.html"
 	}
+
 	data, err := fs.ReadFile(testdata, "testdata"+path)
 	if err != nil {
 		panic("Not found: " + path)

@@ -2,12 +2,13 @@ package crawler
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"fmt"
 	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -60,21 +61,26 @@ type host struct {
 
 func (ctx *fetchContext) Work() {
 	defer ctx.wg.Done()
+	for h := ctx.tryChooseWork(nil); h != nil; h = ctx.tryChooseWork(h) {
+		ctx.crawlHost(h)
+	}
+}
+
+// Crawl (strike and )
+func (ctx *fetchContext) crawlHost(h *host) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("[defered error]", err)
+			fmt.Println("[defered error]", err)
 			debug.PrintStack()
 		}
 	}()
 
-	for h := ctx.tryChooseWork(nil); h != nil; h = ctx.tryChooseWork(h) {
-		urls, crawDelay := ctx.strikeURLs(h.scheme, h.host, h.urls)
-		for _, u := range urls {
-			fetchOne(ctx, u)
-			ctx.sleep(crawDelay)
-			if ctx.close {
-				return
-			}
+	urls, crawDelay := ctx.strikeURLs(h.scheme, h.host, h.urls)
+	for _, u := range urls {
+		ctx.sleep(crawDelay)
+		ctx.fetchOne(u)
+		if ctx.close {
+			return
 		}
 	}
 }
@@ -153,7 +159,7 @@ func createKey(scheme, host string) string { return scheme + ":" + host }
 
 /* FETCHING ONE */
 
-func fetchOne(ctx *fetchContext, u *url.URL) {
+func (ctx *fetchContext) fetchOne(u *url.URL) {
 	key := crawldatabase.NewKeyURL(u)
 
 	// Get the body
@@ -206,7 +212,7 @@ func fetchOne(ctx *fetchContext, u *url.URL) {
 }
 
 // Strike all url (from same host), and return it with crawDelay.
-// - The path is "/robots.txt"
+// - The path is "/robots.txt" or "/favicon.ico"
 // - Filtered
 // - Blocked by robots.
 func (ctx *fetchContext) strikeURLs(scheme, host string, urls []*url.URL) ([]*url.URL, int) {
@@ -257,18 +263,9 @@ func (ctx *fetchContext) sleep(crawDelay int) {
 
 // Fetch the url, and return: the body, the redirect URL or the error.
 func fetchBytes(u *url.URL, roundTripper http.RoundTripper, maxRedirect int, maxBody int64) (*bytes.Buffer, *url.URL, string) {
-	client := http.Client{
-		Transport: roundTripper,
-		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
-			if len(via) > maxRedirect {
-				return tooRedirect
-			}
-			return nil
-		},
-		Timeout: time.Duration(maxRedirect) * time.Second,
-	}
+	request, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), nil)
+	response, err := roundTripper.RoundTrip(request)
 
-	response, err := client.Get(u.String())
 	if err != nil {
 		if errors.Is(err, tooRedirect) {
 			return getLocation(u, response)
