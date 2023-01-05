@@ -43,41 +43,48 @@ func (page *Page) GetURLs() map[crawldatabase.Key]*url.URL {
 func getParentURL(urls map[crawldatabase.Key]*url.URL, src *url.URL) {
 	// Source
 	cleanURL(src)
-	urls[crawldatabase.NewKeyURL(src)] = src
+	src.Host = strings.TrimSuffix(src.Host, ".")
+	if key := crawldatabase.NewKeyURL(src); urls[key] != nil {
+		return
+	} else {
+		urls[key] = src
+	}
 
 	// No query
-	u := cloneURL(src)
-	u.RawQuery = ""
-	urls[crawldatabase.NewKeyURL(u)] = u
-
-	// Parent root
-	u = cloneURL(src)
-	u.RawQuery = ""
-
-	// println("\n" + u.String())
-	for u.Path != "/" {
-		u = u.JoinPath("../")
+	if src.RawQuery != "" {
+		u := cloneURL(src)
+		u.RawQuery = ""
 		urls[crawldatabase.NewKeyURL(u)] = u
 	}
+
+	// Parent root
+	u := cloneURL(src)
+	u.RawQuery = ""
+	for i := len(u.Path) - 1; i >= 0; i-- {
+		if u.Path[i] == '/' {
+			u = cloneURL(u)
+			u.Path = u.Path[:i+1]
+			urls[crawldatabase.NewKeyURL(u)] = u
+		}
+	}
+	u = cloneURL(u)
+	u.Path = "/"
 
 	// Port
 	if newHost, _, cutted := strings.Cut(u.Host, ":"); cutted {
-		u = cloneURL(u)
 		u.Host = newHost
 		urls[crawldatabase.NewKeyURL(u)] = u
+		u = cloneURL(u)
 	}
 
 	// Parent host
-	host := strings.TrimSuffix(u.Host, ".")
-	count := strings.Count(host, ".") - 1
+	count := strings.Count(u.Host, ".") - 1
 	for i := 0; i < count; i++ {
-		_, host, _ = strings.Cut(host, ".")
-		u = cloneURL(u)
-		u.Host = host
+		_, u.Host, _ = strings.Cut(u.Host, ".")
 		urls[crawldatabase.NewKeyURL(u)] = u
+		u = cloneURL(u)
 	}
-	u = cloneURL(u)
-	u.Host = "www." + host
+	u.Host = "www." + u.Host
 	urls[crawldatabase.NewKeyURL(u)] = u
 }
 
