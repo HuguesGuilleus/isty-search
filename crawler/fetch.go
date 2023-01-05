@@ -56,7 +56,7 @@ type host struct {
 
 func (ctx *fetchContext) Work() {
 	defer ctx.wg.Done()
-	for h := ctx.tryChooseWork(nil); h != nil; h = ctx.tryChooseWork(h) {
+	for h := ctx.tryChooseWork(nil); h != nil && ctx.context.Err() == nil; h = ctx.tryChooseWork(h) {
 		ctx.crawlHost(h)
 	}
 }
@@ -275,7 +275,9 @@ func fetchBytes(ctx context.Context, roundTripper http.RoundTripper, maxLength i
 		Header:     make(http.Header),
 		Host:       u.Host,
 	}
-	request.WithContext(ctx)
+	requestContext, cancel := context.WithTimeout(ctx, time.Millisecond*100)
+	defer cancel()
+	request.WithContext(requestContext)
 	response, err := roundTripper.RoundTrip(&request)
 
 	if err != nil {
