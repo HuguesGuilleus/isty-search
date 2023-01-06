@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/common"
@@ -15,7 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime/pprof"
+	"sort"
 	"strings"
 	"time"
 )
@@ -38,6 +39,7 @@ func main() {
 		"vocab":    mainVocab,
 		"stats":    mainDBStatistics,
 		"pagerank": mainPageRank,
+		"index":    mainIndex,
 	}
 	action := actions[flag.Arg(0)]
 	if action == nil {
@@ -156,6 +158,46 @@ func mainPageRank(logger *slog.Logger, dbbase string) error {
 	}
 	pageRank.DevScore()
 	pageRank.DevStats(logger)
+
+	return nil
+}
+
+func mainIndex(logger *slog.Logger, dbbase string) error {
+	_, db, err := crawldatabase.Open[crawler.Page](logger, dbbase, false)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	wordsIndex := make(search.VocabAdvanced)
+	pageRank := search.NewPageRank()
+	if err := crawler.Process(db, logger, &pageRank, &wordsIndex); err != nil {
+		return err
+	}
+
+	logger.Info("order.pagerank")
+	scores := pageRank.Score(200)
+	globalOrder := make(map[crawldatabase.Key]float32, len(scores))
+	for _, score := range scores {
+		globalOrder[score.Key] = score.Rank
+	}
+
+	logger.Info("order.sort")
+	for _, pages := range wordsIndex {
+		sort.Slice(pages, func(i, j int) bool {
+			return globalOrder[pages[i].Page] < globalOrder[pages[j].Page]
+		})
+	}
+
+	logger.Info("order.save")
+	wordsPath := filepath.Join(dbbase, "words.gob")
+	wordsFile, err := os.Create(wordsPath)
+	fatal(err)
+	defer wordsFile.Close()
+
+	if err := gob.NewEncoder(wordsFile).Encode(wordsIndex); err != nil {
+		return fmt.Errorf("Encode the words index in %q: %w", wordsPath, err)
+	}
 
 	return nil
 }

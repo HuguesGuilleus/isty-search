@@ -8,8 +8,8 @@ import (
 )
 
 type VocabAdvanced map[crawldatabase.Key][]struct {
-	page  crawldatabase.Key
-	count int
+	Page  crawldatabase.Key
+	Count int
 }
 
 func (advanced VocabAdvanced) Process(page *crawler.Page) {
@@ -31,8 +31,8 @@ func (advanced VocabAdvanced) Process(page *crawler.Page) {
 	for word, count := range counter {
 		kw := crawldatabase.NewKeyString(word)
 		advanced[kw] = append(advanced[kw], struct {
-			page  crawldatabase.Key
-			count int
+			Page  crawldatabase.Key
+			Count int
 		}{key, count})
 	}
 }
