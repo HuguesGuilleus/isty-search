@@ -147,6 +147,7 @@ func mainPageRank(logger *slog.Logger, dbbase string) error {
 		return err
 	}
 	pageRank.DevScore()
+	pageRank.DevStats(logger)
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
+	"golang.org/x/exp/slog"
 	"sort"
 )
 
@@ -20,8 +21,6 @@ func NewPageRank() PageRank {
 	}
 }
 
-// crawldatabase
-
 func (pr *PageRank) Process(page *crawler.Page) {
 	urls := page.GetURLs()
 	links := make([]crawldatabase.Key, len(urls))
@@ -32,6 +31,25 @@ func (pr *PageRank) Process(page *crawler.Page) {
 	}
 	pr.links[crawldatabase.NewKeyURL(&page.URL)] = links
 	pr.urls[crawldatabase.NewKeyURL(&page.URL)] = page.URL.String()
+}
+
+func (pr *PageRank) DevStats(logger *slog.Logger) {
+	max := 0
+	for _, links := range pr.links {
+		if len(links) > max {
+			max = len(links)
+		}
+	}
+
+	distribution := make([]int, max+1, max+1)
+	for _, link := range pr.links {
+		distribution[len(link)]++
+	}
+
+	logger.Info("pr.stats", "page", len(pr.links), "max", max)
+	for i, count := range distribution {
+		logger.Info("pr.distribution", "i", i, "count", count)
+	}
 }
 
 // Run pr.Score(), sort the result and print beter line.
