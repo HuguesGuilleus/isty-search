@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/gob"
 	"flag"
@@ -40,6 +41,7 @@ func main() {
 		"stats":    mainDBStatistics,
 		"pagerank": mainPageRank,
 		"index":    mainIndex,
+		"search":   mainSearch,
 	}
 	action := actions[flag.Arg(0)]
 	if action == nil {
@@ -197,6 +199,46 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 
 	if err := gob.NewEncoder(wordsFile).Encode(wordsIndex); err != nil {
 		return fmt.Errorf("Encode the words index in %q: %w", wordsPath, err)
+	}
+
+	return nil
+}
+
+func mainSearch(logger *slog.Logger, dbbase string) error {
+	_, db, err := crawldatabase.Open[crawler.Page](logger, dbbase, false)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	wordsPath := filepath.Join(dbbase, "words.gob")
+	logger.Info("words.read", "path", wordsPath)
+	wordsData, err := os.ReadFile(wordsPath)
+	if err != nil {
+		return fmt.Errorf("Read %q to get words index: %w", wordsPath, err)
+	}
+
+	logger.Info("words.decode")
+	wordsIndex := make(search.VocabAdvanced)
+	if err := gob.NewDecoder(bytes.NewReader(wordsData)).Decode(&wordsIndex); err != nil {
+		return fmt.Errorf("Decode %q to get words index: %w", wordsPath, err)
+	}
+
+	result := wordsIndex[crawldatabase.NewKeyString("isty")]
+	logger.Info("result.len", "len", len(result))
+	if len(result) > 20 {
+		result = result[:20]
+	}
+	for i, pageResult := range result {
+		page, _, err := db.GetValue(pageResult.Page)
+		if err != nil {
+			return fmt.Errorf("Get value([i:%d] %s): %w", i, pageResult.Page, err)
+		}
+		logger.Info("result",
+			"i", i,
+			"url", page.URL.String(),
+			"title", page.Html.Meta.Title,
+		)
 	}
 
 	return nil
