@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
 	"time"
 )
@@ -125,12 +126,19 @@ func mainVocab(logger *slog.Logger, dbbase string) error {
 	defer db.Close()
 
 	pageCounter := search.PageCounter(0)
-	vocabCounter := make(search.VocabCounter)
-	if err := crawler.Process(db, logger, vocabCounter, &pageCounter); err != nil {
+	// vocabCounter := make(search.VocabCounter)
+	allvocab := make(search.VocabAdvanced)
+	if err := crawler.Process(db, logger, &pageCounter, allvocab); err != nil {
 		return err
 	}
 
-	logger.Info("vocab.stats", "page", pageCounter, "words", len(vocabCounter), "occuenrence", vocabCounter.TotalWords())
+	logger.Info("vocab.stats", "page", pageCounter, "words", len(allvocab))
+	wordsLen := 0
+	for word := range allvocab {
+		wordsLen += len(word)
+	}
+	logger.Info("vocab.allword", "len", "wordsLen")
+	// logger.Info("vocab.stats", "page", pageCounter, "words", len(vocabCounter), "occuenrence", vocabCounter.TotalWords())
 
 	return nil
 }
