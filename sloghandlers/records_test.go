@@ -14,7 +14,7 @@ var expectedRecords = []string{
 	"INFO [yolo] XXXXX.http=HTTP XXXXX.YYYYY.swag=42",
 }
 
-func TestHandlerTest(t *testing.T) {
+func TestHandlerRecords(t *testing.T) {
 	records, h := NewHandlerRecords(slog.InfoLevel)
 
 	assert.False(t, h.Enabled(slog.DebugLevel))
