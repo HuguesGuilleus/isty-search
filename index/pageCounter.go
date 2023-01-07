@@ -1,4 +1,4 @@
-package search
+package index
 
 import (
 	"github.com/HuguesGuilleus/isty-search/crawler"

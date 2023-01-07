@@ -10,7 +10,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
-	"github.com/HuguesGuilleus/isty-search/search"
+	"github.com/HuguesGuilleus/isty-search/index"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"golang.org/x/exp/slog"
 	"net/url"
@@ -129,9 +129,9 @@ func mainVocab(logger *slog.Logger, dbbase string) error {
 	}
 	defer db.Close()
 
-	pageCounter := search.PageCounter(0)
-	// vocabCounter := make(search.VocabCounter)
-	allvocab := make(search.VocabAdvanced)
+	pageCounter := index.PageCounter(0)
+	// vocabCounter := make(index.VocabCounter)
+	allvocab := make(index.VocabAdvanced)
 	if err := crawler.Process(db, logger, &pageCounter, allvocab); err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func mainPageRank(logger *slog.Logger, dbbase string) error {
 	}
 	defer db.Close()
 
-	pageRank := search.NewPageRank()
+	pageRank := index.NewPageRank()
 	if err := crawler.Process(db, logger, &pageRank); err != nil {
 		return err
 	}
@@ -171,8 +171,8 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 	}
 	defer db.Close()
 
-	wordsIndex := make(search.VocabAdvanced)
-	pageRank := search.NewPageRank()
+	wordsIndex := make(index.VocabAdvanced)
+	pageRank := index.NewPageRank()
 	if err := crawler.Process(db, logger, &pageRank, &wordsIndex); err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 	}
 
 	logger.Info("words.decode")
-	wordsIndex := make(search.VocabAdvanced)
+	wordsIndex := make(index.VocabAdvanced)
 	if err := gob.NewDecoder(bytes.NewReader(wordsData)).Decode(&wordsIndex); err != nil {
 		return fmt.Errorf("Decode %q to get words index: %w", wordsPath, err)
 	}
