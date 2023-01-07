@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"golang.org/x/exp/slog"
 	"strconv"
+	"unicode"
 )
 
 type commonHandler struct {
@@ -64,7 +65,17 @@ func writeAttr(buff *bytes.Buffer, base string, a slog.Attr) {
 		printUint64(buff, a.Value.Uint64())
 	default:
 		writeKey(buff, base, a.Key)
-		buff.WriteString(a.Value.String())
+
+		s := a.Value.String()
+		for _, c := range s {
+			mustquoted := unicode.IsSpace(c) || !unicode.IsPrint(c) ||
+				c == '"' || c == '='
+			if mustquoted {
+				buff.WriteString(strconv.Quote(s))
+				return
+			}
+		}
+		buff.WriteString(s)
 	}
 }
 

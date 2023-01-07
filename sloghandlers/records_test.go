@@ -8,7 +8,7 @@ import (
 )
 
 var expectedRecords = []string{
-	"WARN [simple] attr=042",
+	"WARN [simple] attr=042 quoted=\"x=3\"",
 	"ERROR [fatal] group.a1=A group.a2=+002 group.sub.b=true err=EOF",
 	"INFO+1 [hello] number=-078_356 who=world!",
 	"INFO [yolo] XXXXX.http=HTTP XXXXX.YYYYY.swag=+042",
@@ -27,7 +27,7 @@ func TestHandlerRecords(t *testing.T) {
 // Add record to the handler.
 func fillLogger(h slog.Handler) {
 	l := slog.New(h)
-	l.Warn("simple", "attr", uint64(42))
+	l.Warn("simple", "attr", uint64(42), "quoted", `x=3`)
 	l.Error("fatal", io.EOF, slog.Group("group",
 		slog.String("a1", "A"),
 		slog.Int("a2", 2),
