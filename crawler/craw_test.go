@@ -53,15 +53,15 @@ func TestCrawl(t *testing.T) {
 	sort.Strings(*records)
 	assert.Equal(t, []string{
 		`INFO [fetch.err] err=FATAL url=https://example.org/err-fatal`,
-		`INFO [fetch.ok] status=200 url=https://example.org/`,
-		`INFO [fetch.ok] status=200 url=https://example.org/dir/`,
-		`INFO [fetch.ok] status=200 url=https://example.org/dir/subdir/`,
-		`INFO [fetch.ok] status=200 url=https://example.org/es.html`,
-		`INFO [fetch.ok] status=200 url=https://example.org/known.html`,
-		`INFO [fetch.ok] status=200 url=https://example.org/redirected.html`,
-		`INFO [fetch.ok] status=200 url=https://example.org/robots.txt`,
-		`INFO [fetch.ok] status=308 url=https://example.org/redirection`,
-		`INFO [fetch.ok] status=404 url=https://example.org/err-404`,
+		`INFO [fetch.ok] status=+200 url=https://example.org/`,
+		`INFO [fetch.ok] status=+200 url=https://example.org/dir/`,
+		`INFO [fetch.ok] status=+200 url=https://example.org/dir/subdir/`,
+		`INFO [fetch.ok] status=+200 url=https://example.org/es.html`,
+		`INFO [fetch.ok] status=+200 url=https://example.org/known.html`,
+		`INFO [fetch.ok] status=+200 url=https://example.org/redirected.html`,
+		`INFO [fetch.ok] status=+200 url=https://example.org/robots.txt`,
+		`INFO [fetch.ok] status=+308 url=https://example.org/redirection`,
+		`INFO [fetch.ok] status=+404 url=https://example.org/err-404`,
 	}, *records)
 
 	// Test page

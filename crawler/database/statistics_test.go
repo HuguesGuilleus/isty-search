@@ -86,29 +86,29 @@ func TestStatisticsLog(t *testing.T) {
 	records, handler := sloghandlers.NewHandlerRecords(slog.DebugLevel)
 	stats.Log(slog.New(handler))
 	assert.Equal(t, []string{
-		"INFO [db.stats.total] count.all=11 count.know=1 count.redirect=1 count.file=5 count.error=4 size=20",
+		"INFO [db.stats.total] count.all=+011 count.know=+001 count.redirect=+001 count.file=+005 count.error=+004 size=+020",
 	}, *records)
 
 	records, handler = sloghandlers.NewHandlerRecords(slog.DebugLevel)
 	stats.LogAll(slog.New(handler))
 	assert.Equal(t, []string{
-		"INFO [db.stats.total] count.all=11 count.know=1 count.redirect=1 count.file=5 count.error=4 size=20",
-		"INFO [db.stats.count] count=1 percent=9 type=know",
-		"INFO [db.stats.count] count=1 percent=9 type=redirect",
-		"INFO [db.stats.count] count=1 percent=9 type=fileRobots",
-		"INFO [db.stats.count] count=1 percent=9 type=fileHTML",
-		"INFO [db.stats.count] count=1 percent=9 type=fileRSS",
-		"INFO [db.stats.count] count=1 percent=9 type=fileSitemap",
-		"INFO [db.stats.count] count=1 percent=9 type=fileFavicon",
-		"INFO [db.stats.count] count=1 percent=9 type=errorNetwork",
-		"INFO [db.stats.count] count=1 percent=9 type=errorParsing",
-		"INFO [db.stats.count] count=1 percent=9 type=errorFilterURL",
-		"INFO [db.stats.count] count=1 percent=9 type=errorFilterPage",
-		"INFO [db.stats.size] total=20",
-		"INFO [db.stats.size] size=2 percent=10 type=fileRobots",
-		"INFO [db.stats.size] size=3 percent=15 type=fileHTML",
-		"INFO [db.stats.size] size=4 percent=20 type=fileRSS",
-		"INFO [db.stats.size] size=5 percent=25 type=fileSitemap",
-		"INFO [db.stats.size] size=6 percent=30 type=fileFavicon",
+		"INFO [db.stats.total] count.all=+011 count.know=+001 count.redirect=+001 count.file=+005 count.error=+004 size=+020",
+		"INFO [db.stats.count] count=+001 percent=+009 type=know",
+		"INFO [db.stats.count] count=+001 percent=+009 type=redirect",
+		"INFO [db.stats.count] count=+001 percent=+009 type=fileRobots",
+		"INFO [db.stats.count] count=+001 percent=+009 type=fileHTML",
+		"INFO [db.stats.count] count=+001 percent=+009 type=fileRSS",
+		"INFO [db.stats.count] count=+001 percent=+009 type=fileSitemap",
+		"INFO [db.stats.count] count=+001 percent=+009 type=fileFavicon",
+		"INFO [db.stats.count] count=+001 percent=+009 type=errorNetwork",
+		"INFO [db.stats.count] count=+001 percent=+009 type=errorParsing",
+		"INFO [db.stats.count] count=+001 percent=+009 type=errorFilterURL",
+		"INFO [db.stats.count] count=+001 percent=+009 type=errorFilterPage",
+		"INFO [db.stats.size] total=+020",
+		"INFO [db.stats.size] size=+002 percent=+010 type=fileRobots",
+		"INFO [db.stats.size] size=+003 percent=+015 type=fileHTML",
+		"INFO [db.stats.size] size=+004 percent=+020 type=fileRSS",
+		"INFO [db.stats.size] size=+005 percent=+025 type=fileSitemap",
+		"INFO [db.stats.size] size=+006 percent=+030 type=fileFavicon",
 	}, *records)
 }

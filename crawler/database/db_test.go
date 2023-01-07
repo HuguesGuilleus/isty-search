@@ -185,9 +185,9 @@ func TestForHTML(t *testing.T) {
 	// Log records
 	assert.Equal(t, []string{
 		"INFO [db.open] base=__db",
-		"INFO [%] %i=0 %len=3",
-		"INFO [%] %i=1 %len=3",
-		"INFO [%] %i=2 %len=3",
+		"INFO [%] %i=+000 %len=+003",
+		"INFO [%] %i=+001 %len=+003",
+		"INFO [%] %i=+002 %len=+003",
 		"INFO [%end]",
 	}, *records)
 }
