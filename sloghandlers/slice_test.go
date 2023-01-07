@@ -7,7 +7,7 @@ import (
 )
 
 func TestHandlerSlice(t *testing.T) {
-	r1, h1 := NewHandlerRecords(slog.InfoLevel)
+	r1, h1 := NewHandlerRecords(slog.DebugLevel + 1)
 	r2, h2 := NewHandlerRecords(slog.InfoLevel)
 	fillLogger(NewMultiHandlers(h1, h2))
 
