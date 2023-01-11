@@ -1,6 +1,7 @@
 package crawldatabase
 
 import (
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"golang.org/x/exp/slog"
 	"io"
@@ -20,7 +21,7 @@ func OpenMemory[T any](logger *slog.Logger, _ string, _ bool) ([]*url.URL, *Data
 		logger:      logger,
 		statsTicker: &time.Ticker{},
 		base:        "$memory",
-		mapMeta:     make(map[Key]metavalue),
+		mapMeta:     make(map[keys.Key]metavalue),
 		metaFile:    &memFile{},
 		urlsFile:    &memFile{},
 		dataFile:    &memFile{},

@@ -6,6 +6,7 @@ package crawldatabase
 
 import (
 	"bytes"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"testing"
@@ -13,7 +14,7 @@ import (
 
 // Save into w, the key and the metavalue.
 // The size of each entry is the same.
-func writeFixedMetavalue(key Key, meta metavalue, w io.Writer) error {
+func writeFixedMetavalue(key keys.Key, meta metavalue, w io.Writer) error {
 	bytes := [keyMetavalueLen]byte{}
 	copy(bytes[:], key[:])
 
@@ -59,7 +60,7 @@ func TestWriteFixedMetavalue(t *testing.T) {
 	// The key is appended to the expected bytes.
 	test := func(name string, m metavalue, expected [40]byte) {
 		t.Run(name, func(t *testing.T) {
-			key := NewKeyURL(googleHowURL)
+			key := keys.NewURL(googleHowURL)
 			buff := bytes.Buffer{}
 			assert.NoError(t, writeFixedMetavalue(key, m, &buff))
 			assert.Equal(t, append(key[:], expected[:]...), buff.Bytes())
@@ -72,7 +73,7 @@ func TestWriteFixedMetavalue(t *testing.T) {
 	test("redirect", metavalue{
 		Type: TypeRedirect,
 		Time: 0x00_0000_6399_c7d4,
-		Hash: NewKeyURL(googleRootURL),
+		Hash: keys.NewURL(googleRootURL),
 	}, [40]byte{
 		// Type
 		2,
@@ -87,7 +88,7 @@ func TestWriteFixedMetavalue(t *testing.T) {
 		Time:     0x00_0000_6399_c7d4,
 		Position: 0x1122334455667788,
 		Length:   0x11223344,
-		Hash:     NewKeyURL(googleRootURL),
+		Hash:     keys.NewURL(googleRootURL),
 	}, [40]byte{
 		// Type HTML
 		4,
@@ -116,49 +117,49 @@ func TestWriteFixedMetavalue(t *testing.T) {
 
 // Load many meta and keys.
 // The size of each entry is the same.
-func loadFixedMetavalue(bytes []byte) map[Key]metavalue {
-	mapMeta := make(map[Key]metavalue, len(bytes)/keyMetavalueLen)
+func loadFixedMetavalue(bytes []byte) map[keys.Key]metavalue {
+	mapMeta := make(map[keys.Key]metavalue, len(bytes)/keyMetavalueLen)
 
 	for i := 0; i < len(bytes); i += keyMetavalueLen {
-		key := Key{}
+		key := keys.Key{}
 		copy(key[:], bytes[i:])
 
 		meta := metavalue{}
 
 		meta.Time = 0 |
-			int64(bytes[i+KeyLen+1])<<48 |
-			int64(bytes[i+KeyLen+2])<<40 |
-			int64(bytes[i+KeyLen+3])<<32 |
-			int64(bytes[i+KeyLen+4])<<24 |
-			int64(bytes[i+KeyLen+5])<<16 |
-			int64(bytes[i+KeyLen+6])<<8 |
-			int64(bytes[i+KeyLen+7])<<0
+			int64(bytes[i+keys.Len+1])<<48 |
+			int64(bytes[i+keys.Len+2])<<40 |
+			int64(bytes[i+keys.Len+3])<<32 |
+			int64(bytes[i+keys.Len+4])<<24 |
+			int64(bytes[i+keys.Len+5])<<16 |
+			int64(bytes[i+keys.Len+6])<<8 |
+			int64(bytes[i+keys.Len+7])<<0
 
-		switch meta.Type = bytes[i+KeyLen]; meta.Type {
+		switch meta.Type = bytes[i+keys.Len]; meta.Type {
 		case TypeNothing:
 			delete(mapMeta, key)
 			continue
 		case TypeKnow:
 			meta.Time = 0
 		case TypeRedirect:
-			copy(meta.Hash[:], bytes[i+KeyLen+8:])
+			copy(meta.Hash[:], bytes[i+keys.Len+8:])
 		default:
 			if meta.Type < TypeError { // It's a file
 				meta.Position = 0 |
-					int64(bytes[i+KeyLen+8])<<56 |
-					int64(bytes[i+KeyLen+9])<<48 |
-					int64(bytes[i+KeyLen+10])<<40 |
-					int64(bytes[i+KeyLen+11])<<32 |
-					int64(bytes[i+KeyLen+12])<<24 |
-					int64(bytes[i+KeyLen+13])<<16 |
-					int64(bytes[i+KeyLen+14])<<8 |
-					int64(bytes[i+KeyLen+15])<<0
+					int64(bytes[i+keys.Len+8])<<56 |
+					int64(bytes[i+keys.Len+9])<<48 |
+					int64(bytes[i+keys.Len+10])<<40 |
+					int64(bytes[i+keys.Len+11])<<32 |
+					int64(bytes[i+keys.Len+12])<<24 |
+					int64(bytes[i+keys.Len+13])<<16 |
+					int64(bytes[i+keys.Len+14])<<8 |
+					int64(bytes[i+keys.Len+15])<<0
 				meta.Length = 0 |
-					int32(bytes[i+KeyLen+16])<<24 |
-					int32(bytes[i+KeyLen+17])<<16 |
-					int32(bytes[i+KeyLen+18])<<8 |
-					int32(bytes[i+KeyLen+19])<<0
-				copy(meta.Hash[12:], bytes[i+KeyLen+20:])
+					int32(bytes[i+keys.Len+16])<<24 |
+					int32(bytes[i+keys.Len+17])<<16 |
+					int32(bytes[i+keys.Len+18])<<8 |
+					int32(bytes[i+keys.Len+19])<<0
+				copy(meta.Hash[12:], bytes[i+keys.Len+20:])
 			}
 		}
 

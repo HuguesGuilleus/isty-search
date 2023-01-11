@@ -8,6 +8,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/slog"
@@ -25,7 +26,7 @@ func TestCrawl(t *testing.T) {
 	logger := slog.New(logHandler)
 
 	_, db, _ := crawldatabase.OpenMemory[Page](logger, "", false)
-	db.SetSimple(crawldatabase.NewKeyString("https://example.org/known.html"), crawldatabase.TypeKnow)
+	db.SetSimple(keys.NewString("https://example.org/known.html"), crawldatabase.TypeKnow)
 	err := Crawl(context.Background(), Config{
 		DBopener: func(argLogger *slog.Logger, base string, logStatistics bool) ([]*url.URL, *crawldatabase.Database[Page], error) {
 			assert.Equal(t, logger, argLogger)
@@ -76,7 +77,7 @@ func TestCrawl(t *testing.T) {
 		root, err := htmlnode.Parse(data)
 		assert.NoError(t, err)
 
-		page, _, err := db.GetValue(crawldatabase.NewKeyString("https://example.org" + path))
+		page, _, err := db.GetValue(keys.NewString("https://example.org" + path))
 		assert.NoError(t, err, "https://example.org"+path)
 		assert.Equal(t, root.Head.PrintLines(), page.Html.Head.PrintLines())
 		assert.Equal(t, root.Body.PrintLines(), page.Html.Body.PrintLines())

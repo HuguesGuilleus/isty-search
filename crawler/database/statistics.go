@@ -1,6 +1,7 @@
 package crawldatabase
 
 import (
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"golang.org/x/exp/slog"
 )
 
@@ -22,7 +23,7 @@ type Statistics struct {
 }
 
 // Get the statistics from the metavalue map.
-func getStatistics(m map[Key]metavalue) (stats Statistics) {
+func getStatistics(m map[keys.Key]metavalue) (stats Statistics) {
 	stats.Total = len(m)
 
 	for _, meta := range m {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"golang.org/x/exp/slog"
 	"net/http"
 	"net/url"
@@ -67,19 +68,19 @@ func Crawl(mainContext context.Context, config Config) error {
 	}
 	defer fetchContext.wg.Wait()
 
-	urls4db := make(map[crawldatabase.Key]*url.URL, len(config.Input))
-	urls4plan := make(map[crawldatabase.Key]*url.URL, len(config.Input))
+	urls4db := make(map[keys.Key]*url.URL, len(config.Input))
+	urls4plan := make(map[keys.Key]*url.URL, len(config.Input))
 	for _, u := range config.Input {
-		key := crawldatabase.NewKeyURL(u)
+		key := keys.NewURL(u)
 		urls4plan[key] = u
 		urls4db[key] = u
 	}
 	fetchContext.db.AddURL(urls4db)
 	fetchContext.planURLs(urls4plan)
 
-	urlsFromDBMap := make(map[crawldatabase.Key]*url.URL, len(config.Input))
+	urlsFromDBMap := make(map[keys.Key]*url.URL, len(config.Input))
 	for _, u := range urlsFromDB {
-		urlsFromDBMap[crawldatabase.NewKeyURL(u)] = u
+		urlsFromDBMap[keys.NewURL(u)] = u
 	}
 	fetchContext.planURLs(urlsFromDBMap)
 

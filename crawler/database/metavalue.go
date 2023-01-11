@@ -1,6 +1,7 @@
 package crawldatabase
 
 import (
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"io"
 )
 
@@ -29,7 +30,7 @@ const (
 const keyMetavalueLen = 72
 
 type keymetavalue struct {
-	key  Key
+	key  keys.Key
 	meta metavalue
 }
 
@@ -37,12 +38,12 @@ type keymetavalue struct {
 type metavalue struct {
 	Type     byte
 	Time     int64
-	Hash     Key
+	Hash     keys.Key
 	Position int64
 	Length   int32
 }
 
-func writeElasticMetavalue(key Key, meta metavalue, w io.Writer) error {
+func writeElasticMetavalue(key keys.Key, meta metavalue, w io.Writer) error {
 	bytes := [keyMetavalueLen]byte{}
 	copy(bytes[:], key[:])
 	bytes[32] = meta.Type
@@ -91,14 +92,14 @@ func writeElasticMetavalue(key Key, meta metavalue, w io.Writer) error {
 }
 
 // Load many meta and keys
-func loadElasticMetavalue(bytes []byte) map[Key]metavalue {
-	mapMeta := make(map[Key]metavalue, len(bytes)/(KeyLen+1))
+func loadElasticMetavalue(bytes []byte) map[keys.Key]metavalue {
+	mapMeta := make(map[keys.Key]metavalue, len(bytes)/(keys.Len+1))
 
 	for i := 0; i+32 < len(bytes); {
-		key := Key{}
+		key := keys.Key{}
 		copy(key[:], bytes[i:])
 
-		metaType := bytes[i+KeyLen]
+		metaType := bytes[i+keys.Len]
 		if metaType == TypeNothing {
 			delete(mapMeta, key)
 			i += 33

@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding"
 	"fmt"
-	"github.com/HuguesGuilleus/isty-search/crawler/database"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"os"
 )
 
-func Store[T encoding.BinaryMarshaler](file string, m map[crawldatabase.Key]T) error {
+func Store[T encoding.BinaryMarshaler](file string, m map[keys.Key]T) error {
 	buff := bytes.Buffer{}
 
 	for key, value := range m {
@@ -27,18 +27,18 @@ func Store[T encoding.BinaryMarshaler](file string, m map[crawldatabase.Key]T) e
 	return os.WriteFile(file, buff.Bytes(), 0o664)
 }
 
-func Load[T any](file string, unmarshal func([]byte) (T, error)) (map[crawldatabase.Key]T, error) {
+func Load[T any](file string, unmarshal func([]byte) (T, error)) (map[keys.Key]T, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("Load(%q): %w", file, err)
 	}
 
-	m := make(map[crawldatabase.Key]T)
-	for i := 0; i+crawldatabase.KeyLen+4 < len(data); {
+	m := make(map[keys.Key]T)
+	for i := 0; i+keys.Len+4 < len(data); {
 		// Get the key
-		key := crawldatabase.Key{}
+		key := keys.Key{}
 		copy(key[:], data[i:])
-		i += crawldatabase.KeyLen
+		i += keys.Len
 
 		// Get the length
 		l := int(data[i+0])<<24 |

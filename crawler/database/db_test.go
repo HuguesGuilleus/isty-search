@@ -2,6 +2,7 @@ package crawldatabase
 
 import (
 	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/slog"
@@ -19,7 +20,7 @@ func TestDBFile(t *testing.T) {
 		Value:   "swag",
 		Expires: time.Date(2022, time.October, 5, 20, 8, 50, 0, time.UTC),
 	}
-	key := NewKeyString("key")
+	key := keys.NewString("key")
 
 	defer os.RemoveAll("__db")
 
@@ -49,8 +50,8 @@ func TestDBFile(t *testing.T) {
 	// Set
 	assert.NoError(t, db.SetValue(key, &http.Cookie{}, TypeFileHTML))
 	assert.NoError(t, db.SetValue(key, &expectedValue, TypeFileHTML))
-	assert.NoError(t, db.SetValue(NewKeyString("qsdgfd"), &http.Cookie{}, TypeFileHTML))
-	assert.NoError(t, db.SetValue(NewKeyString("gejkhk"), &http.Cookie{}, TypeFileHTML))
+	assert.NoError(t, db.SetValue(keys.NewString("qsdgfd"), &http.Cookie{}, TypeFileHTML))
+	assert.NoError(t, db.SetValue(keys.NewString("gejkhk"), &http.Cookie{}, TypeFileHTML))
 
 	// Get
 	v, storedTime, err = db.GetValue(key)
@@ -59,7 +60,7 @@ func TestDBFile(t *testing.T) {
 	assert.False(t, storedTime.IsZero())
 
 	// Set simple
-	ks := NewKeyString("simple")
+	ks := keys.NewString("simple")
 	assert.Error(t, db.SetSimple(ks, TypeFileRSS))
 	assert.NoError(t, db.SetSimple(ks, TypeErrorParsing))
 
@@ -69,15 +70,15 @@ func TestDBFile(t *testing.T) {
 	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
 
 	// Remove key
-	kd := NewKeyString("deleted")
+	kd := keys.NewString("deleted")
 	assert.NoError(t, db.SetSimple(kd, TypeErrorParsing))
 	assert.NotZero(t, db.mapMeta[kd])
 	assert.NoError(t, db.SetSimple(kd, TypeNothing))
 	assert.Zero(t, db.mapMeta[kd])
 
 	// Redirection
-	ko := NewKeyString("origin")
-	kt := NewKeyString("target")
+	ko := keys.NewString("origin")
+	kt := keys.NewString("target")
 	assert.NoError(t, db.SetRedirect(ko, kt))
 	meta = db.mapMeta[ko]
 	assert.NotZero(t, meta.Time)
@@ -117,12 +118,12 @@ func TestDBFile(t *testing.T) {
 	assert.Equal(t, metavalue{Type: TypeRedirect, Hash: kt}, meta)
 
 	// Redirections
-	koo := NewKeyString("origin-origin")
+	koo := keys.NewString("origin-origin")
 	assert.NoError(t, db.SetValue(kt, &http.Cookie{}, TypeFile))
 	assert.NoError(t, db.SetRedirect(koo, ko))
-	assert.NoError(t, db.SetRedirect(NewKeyString("2null"), NewKeyString("null")))
+	assert.NoError(t, db.SetRedirect(keys.NewString("2null"), keys.NewString("null")))
 	// the chain koo -> ko -> kt
-	assert.Equal(t, map[Key]Key{
+	assert.Equal(t, map[keys.Key]keys.Key{
 		koo: kt,
 		ko:  kt,
 	}, db.Redirections())
@@ -147,9 +148,9 @@ func TestForHTML(t *testing.T) {
 	cookie2 := &http.Cookie{Name: "2", MaxAge: 2}
 	cookie3 := &http.Cookie{Name: "3", MaxAge: 3}
 
-	k1 := NewKeyString("k1")
-	k2 := NewKeyString("k2")
-	k3 := NewKeyString("k3")
+	k1 := keys.NewString("k1")
+	k2 := keys.NewString("k2")
+	k3 := keys.NewString("k3")
 
 	defer os.RemoveAll("__db")
 	records, handler := sloghandlers.NewHandlerRecords(slog.InfoLevel)
@@ -159,15 +160,15 @@ func TestForHTML(t *testing.T) {
 	defer func() { assert.NoError(t, db.Close()) }()
 
 	// Add values
-	assert.NoError(t, db.SetSimple(NewKeyString("err"), TypeErrorNetwork))
+	assert.NoError(t, db.SetSimple(keys.NewString("err"), TypeErrorNetwork))
 	assert.NoError(t, db.SetValue(k1, cookie1, TypeFileHTML))
 	assert.NoError(t, db.SetValue(k2, cookie2, TypeFileHTML))
 	assert.NoError(t, db.SetValue(k3, cookie3, TypeFileHTML))
 
 	// Check ForHTML caller
-	readed := make(map[Key]*http.Cookie, 3)
+	readed := make(map[keys.Key]*http.Cookie, 3)
 	globalInc := 0
-	err = db.ForHTML(func(key Key, c *http.Cookie, i, total int) {
+	err = db.ForHTML(func(key keys.Key, c *http.Cookie, i, total int) {
 		assert.Equal(t, 3, total)
 		assert.Nil(t, readed[key])
 		readed[key] = c
@@ -176,7 +177,7 @@ func TestForHTML(t *testing.T) {
 		globalInc++
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, map[Key]*http.Cookie{
+	assert.Equal(t, map[keys.Key]*http.Cookie{
 		k1: cookie1,
 		k2: cookie2,
 		k3: cookie3,
@@ -199,7 +200,7 @@ func TestDBMemory(t *testing.T) {
 		Value:   "swag",
 		Expires: time.Date(2022, time.October, 5, 20, 8, 50, 0, time.UTC),
 	}
-	key := NewKeyString("key")
+	key := keys.NewString("key")
 
 	records, handler := sloghandlers.NewHandlerRecords(slog.InfoLevel)
 	urls, db, err := OpenMemory[http.Cookie](slog.New(handler), "", false)
@@ -226,8 +227,8 @@ func TestDBMemory(t *testing.T) {
 	// Set
 	assert.NoError(t, db.SetValue(key, &http.Cookie{}, TypeFileHTML))
 	assert.NoError(t, db.SetValue(key, &expectedValue, TypeFileHTML))
-	assert.NoError(t, db.SetValue(NewKeyString("qsdgfd"), &http.Cookie{}, TypeFileHTML))
-	assert.NoError(t, db.SetValue(NewKeyString("gejkhk"), &http.Cookie{}, TypeFileHTML))
+	assert.NoError(t, db.SetValue(keys.NewString("qsdgfd"), &http.Cookie{}, TypeFileHTML))
+	assert.NoError(t, db.SetValue(keys.NewString("gejkhk"), &http.Cookie{}, TypeFileHTML))
 
 	// Get
 	v, storedTime, err = db.GetValue(key)
@@ -236,7 +237,7 @@ func TestDBMemory(t *testing.T) {
 	assert.False(t, storedTime.IsZero())
 
 	// Set simple
-	ks := NewKeyString("simple")
+	ks := keys.NewString("simple")
 	assert.Error(t, db.SetSimple(ks, TypeFileRSS))
 	assert.NoError(t, db.SetSimple(ks, TypeErrorParsing))
 
@@ -246,15 +247,15 @@ func TestDBMemory(t *testing.T) {
 	assert.Equal(t, metavalue{Type: TypeErrorParsing}, meta)
 
 	// Remove key
-	kd := NewKeyString("deleted")
+	kd := keys.NewString("deleted")
 	assert.NoError(t, db.SetSimple(kd, TypeErrorParsing))
 	assert.NotZero(t, db.mapMeta[kd])
 	assert.NoError(t, db.SetSimple(kd, TypeNothing))
 	assert.Zero(t, db.mapMeta[kd])
 
 	// Redirection
-	ko := NewKeyString("origin")
-	kt := NewKeyString("target")
+	ko := keys.NewString("origin")
+	kt := keys.NewString("target")
 	assert.NoError(t, db.SetRedirect(ko, kt))
 	meta = db.mapMeta[ko]
 	assert.NotZero(t, meta.Time)
@@ -264,14 +265,14 @@ func TestDBMemory(t *testing.T) {
 	assert.Nil(t, *records)
 }
 
-func getURLS() (map[Key]*url.URL, int) {
+func getURLS() (map[keys.Key]*url.URL, int) {
 	originURLS := common.ParseURLs(
 		"https://google.com",
 		"https://www.google.com",
 	)
-	urlsMap := make(map[Key]*url.URL)
+	urlsMap := make(map[keys.Key]*url.URL)
 	for _, u := range originURLS {
-		urlsMap[NewKeyURL(u)] = u
+		urlsMap[keys.NewURL(u)] = u
 	}
 	return urlsMap, len(urlsMap)
 }

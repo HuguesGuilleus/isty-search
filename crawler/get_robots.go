@@ -5,6 +5,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/robotstxt"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"net/http"
 	"net/url"
 	"time"
@@ -35,7 +36,7 @@ func robotGet(ctx context.Context, db *crawldatabase.Database[Page], scheme, hos
 		Host:   host,
 		Path:   robotsPath,
 	}
-	key := crawldatabase.NewKeyURL(&u)
+	key := keys.NewURL(&u)
 
 	// Get from the DB
 	if page, date, _ := db.GetValue(key); page != nil && time.Since(date) < time.Hour*24 {

@@ -7,6 +7,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"io"
 	"net/http"
 	"net/url"
@@ -107,12 +108,12 @@ func (ctx *fetchContext) tryChooseWork(lastHost *host) *host {
 }
 
 // Add urls in the URLsDB and in the ctx.host, then lauch if it's possible new crawl goroutine.
-func (ctx *fetchContext) addURLs(urls map[crawldatabase.Key]*url.URL) {
+func (ctx *fetchContext) addURLs(urls map[keys.Key]*url.URL) {
 	ctx.db.AddURL(urls)
 	ctx.planURLs(urls)
 }
 
-func (ctx *fetchContext) planURLs(urls map[crawldatabase.Key]*url.URL) {
+func (ctx *fetchContext) planURLs(urls map[keys.Key]*url.URL) {
 	ctx.hostsMutex.Lock()
 	defer ctx.hostsMutex.Unlock()
 
@@ -147,7 +148,7 @@ func createKey(scheme, host string) string { return scheme + ":" + host }
 /* FETCHING ONE */
 
 func (ctx *fetchContext) fetchOne(u *url.URL) {
-	key := crawldatabase.NewKeyURL(u)
+	key := keys.NewURL(u)
 
 	// Get the body
 	body, redirect, errString := fetchBytes(ctx.context, ctx.roundTripper, ctx.maxLength, u)
@@ -155,10 +156,10 @@ func (ctx *fetchContext) fetchOne(u *url.URL) {
 		ctx.db.SetSimple(key, crawldatabase.TypeErrorNetwork)
 		return
 	} else if redirect != nil {
-		ctx.addURLs(map[crawldatabase.Key]*url.URL{
-			crawldatabase.NewKeyURL(redirect): redirect,
+		ctx.addURLs(map[keys.Key]*url.URL{
+			keys.NewURL(redirect): redirect,
 		})
-		ctx.db.SetRedirect(key, crawldatabase.NewKeyURL(redirect))
+		ctx.db.SetRedirect(key, keys.NewURL(redirect))
 		return
 	}
 	defer common.RecycleBuffer(body)
@@ -216,14 +217,14 @@ urlFor:
 		// Context filters
 		for _, filter := range ctx.filterURL {
 			if filter(u) {
-				ctx.db.SetSimple(crawldatabase.NewKeyURL(u), crawldatabase.TypeErrorFilterURL)
+				ctx.db.SetSimple(keys.NewURL(u), crawldatabase.TypeErrorFilterURL)
 				continue urlFor
 			}
 		}
 
 		// Robots.txt
 		if !robotsGetter().Allow(u) {
-			ctx.db.SetSimple(crawldatabase.NewKeyURL(u), crawldatabase.TypeErrorRobot)
+			ctx.db.SetSimple(keys.NewURL(u), crawldatabase.TypeErrorRobot)
 			continue urlFor
 		}
 

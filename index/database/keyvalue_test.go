@@ -1,7 +1,7 @@
 package indexdatabase
 
 import (
-	"github.com/HuguesGuilleus/isty-search/crawler/database"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -10,10 +10,10 @@ import (
 func TestKeyValue(t *testing.T) {
 	defer os.Remove("_kv.bin")
 
-	m := map[crawldatabase.Key]Bytes{
-		crawldatabase.NewKeyString("a"): {1, 2, 3},
-		crawldatabase.NewKeyString("b"): {4, 5, 6},
-		crawldatabase.NewKeyString("c"): {7, 8, 9},
+	m := map[keys.Key]Bytes{
+		keys.NewString("a"): {1, 2, 3},
+		keys.NewString("b"): {4, 5, 6},
+		keys.NewString("c"): {7, 8, 9},
 	}
 
 	assert.NoError(t, Store("_kv.bin", m))

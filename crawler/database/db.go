@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"golang.org/x/exp/slog"
 	"io"
 	"io/fs"
@@ -40,7 +41,7 @@ type Database[T any] struct {
 	base string
 
 	mutex    sync.Mutex
-	mapMeta  map[Key]metavalue
+	mapMeta  map[keys.Key]metavalue
 	metaFile fileInferface
 	urlsFile fileInferface
 	dataFile fileInferface
@@ -178,7 +179,7 @@ func (db *Database[_]) Statistics() Statistics {
 //
 // If the URL is known, is deleted of urls, else is saved in DB files.
 // Error are logged and returned.
-func (db *Database[_]) AddURL(urls map[Key]*url.URL) error {
+func (db *Database[_]) AddURL(urls map[keys.Key]*url.URL) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -209,7 +210,7 @@ func (db *Database[_]) AddURL(urls map[Key]*url.URL) error {
 // If the value if not a file, return NotFile.
 // If the value do not exist, return NotExist.
 // The time is the instant of value store.
-func (db *Database[T]) GetValue(key Key) (*T, time.Time, error) {
+func (db *Database[T]) GetValue(key keys.Key) (*T, time.Time, error) {
 	meta := db.getMetavalue(key)
 	if meta.Type == TypeNothing {
 		return nil, time.Time{}, NotExist
@@ -224,7 +225,7 @@ func (db *Database[T]) GetValue(key Key) (*T, time.Time, error) {
 	return value, time.Unix(meta.Time, 0), nil
 }
 
-func (db *Database[T]) readValue(key Key, meta metavalue) (*T, error) {
+func (db *Database[T]) readValue(key keys.Key, meta metavalue) (*T, error) {
 	// Read the data chunck
 	data := make([]byte, int(meta.Length))
 	_, err := db.dataFile.ReadAt(data, meta.Position)
@@ -263,7 +264,7 @@ func (db *Database[T]) readValue(key Key, meta metavalue) (*T, error) {
 	return value, nil
 }
 
-func (db *Database[_]) getMetavalue(key Key) metavalue {
+func (db *Database[_]) getMetavalue(key keys.Key) metavalue {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 	return db.mapMeta[key]
@@ -271,7 +272,7 @@ func (db *Database[_]) getMetavalue(key Key) metavalue {
 
 // Set the value to the DB, overwrite previous value.
 // t must be a type of a regular file.
-func (db *Database[T]) SetValue(key Key, value *T, t byte) error {
+func (db *Database[T]) SetValue(key keys.Key, value *T, t byte) error {
 	if t < TypeFile || t >= TypeError {
 		return fmt.Errorf("DB.SetValue(key=%s): The type %d is not for a file", key, t)
 	} else if value == nil {
@@ -320,7 +321,7 @@ func (db *Database[T]) SetValue(key Key, value *T, t byte) error {
 
 // Set in the DB a simple type: nothing, known or error.
 // Is t is a file type, it return an error, and do not modify the DB.
-func (db *Database[_]) SetSimple(key Key, t byte) error {
+func (db *Database[_]) SetSimple(key keys.Key, t byte) error {
 	if TypeFile <= t && t < TypeError {
 		return fmt.Errorf("Db.SetSimple(key=%s, type=%d) use forbiden type file", key, t)
 	}
@@ -348,7 +349,7 @@ func (db *Database[_]) SetSimple(key Key, t byte) error {
 }
 
 // Set the redirection.
-func (db *Database[_]) SetRedirect(key, destination Key) error {
+func (db *Database[_]) SetRedirect(key, destination keys.Key) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -368,7 +369,7 @@ func (db *Database[_]) SetRedirect(key, destination Key) error {
 // Iterate for each element of type TypeFileHTML.
 //
 // Log the progession with the intern logger.
-func (db *Database[T]) ForHTML(f func(Key, *T, int, int)) error {
+func (db *Database[T]) ForHTML(f func(keys.Key, *T, int, int)) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -405,11 +406,11 @@ func (db *Database[T]) ForHTML(f func(Key, *T, int, int)) error {
 //   - m[r3] = p
 //
 // The redirection chain is limited to 10.
-func (db *Database[_]) Redirections() map[Key]Key {
+func (db *Database[_]) Redirections() map[keys.Key]keys.Key {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	m := make(map[Key]Key)
+	m := make(map[keys.Key]keys.Key)
 	for key, meta := range db.mapMeta {
 		if meta.Type != TypeRedirect {
 			continue
@@ -433,7 +434,7 @@ func (db *Database[_]) Redirections() map[Key]Key {
 	return m
 }
 
-func (db *Database[_]) setmeta(key Key, meta metavalue) error {
+func (db *Database[_]) setmeta(key keys.Key, meta metavalue) error {
 	if err := writeElasticMetavalue(key, meta, db.metaFile); err != nil {
 		db.logerror("write.meta", key, err)
 		return fmt.Errorf("write meta: %w", err)
@@ -442,6 +443,6 @@ func (db *Database[_]) setmeta(key Key, meta metavalue) error {
 }
 
 // The log error.
-func (db *Database[_]) logerror(op string, key Key, err error) {
+func (db *Database[_]) logerror(op string, key keys.Key, err error) {
 	db.logger.Error("db.error", err, "op", op, "key", key.String())
 }

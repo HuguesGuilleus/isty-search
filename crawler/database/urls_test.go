@@ -2,6 +2,7 @@ package crawldatabase
 
 import (
 	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/slog"
@@ -17,10 +18,10 @@ func TestLoadURLs(t *testing.T) {
 			"https://www.google.com/\n"+
 				"https://www.wikipedia.org/\n"+
 				"https://www.wikipedia.fr/\n"),
-		map[Key]metavalue{
-			NewKeyString("https://www.google.com/"):    metavalue{Type: TypeKnow},
-			NewKeyString("https://www.wikipedia.org/"): metavalue{Type: TypeErrorNetwork},
-			NewKeyString("https://www.wikipedia.fr/"):  metavalue{Type: TypeRedirect},
+		map[keys.Key]metavalue{
+			keys.NewString("https://www.google.com/"):    metavalue{Type: TypeKnow},
+			keys.NewString("https://www.wikipedia.org/"): metavalue{Type: TypeErrorNetwork},
+			keys.NewString("https://www.wikipedia.fr/"):  metavalue{Type: TypeRedirect},
 		},
 		[]byte{TypeKnow, TypeErrorNetwork})
 

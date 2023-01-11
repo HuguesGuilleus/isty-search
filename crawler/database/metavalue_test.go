@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"strconv"
@@ -20,7 +21,7 @@ func TestWriteElasticMetavalue(t *testing.T) {
 	// The key is appended to the expected bytes.
 	testWriteMetavalue := func(name string, m metavalue, expected []byte) {
 		t.Run(name, func(t *testing.T) {
-			key := NewKeyURL(googleHowURL)
+			key := keys.NewURL(googleHowURL)
 			buff := bytes.Buffer{}
 			assert.NoError(t, writeElasticMetavalue(key, m, &buff))
 			assert.Equal(t, append(key[:], expected...), buff.Bytes())
@@ -38,7 +39,7 @@ func TestWriteElasticMetavalue(t *testing.T) {
 	testWriteMetavalue("redirect", metavalue{
 		Type: TypeRedirect,
 		Time: 0x00_0000_6399_c7d4,
-		Hash: NewKeyURL(googleRootURL),
+		Hash: keys.NewURL(googleRootURL),
 	}, []byte{
 		// Type
 		2,
@@ -53,7 +54,7 @@ func TestWriteElasticMetavalue(t *testing.T) {
 		Time:     0x00_0000_6399_c7d4,
 		Position: 0x1122334455667788,
 		Length:   0x11223344,
-		Hash:     NewKeyURL(googleRootURL),
+		Hash:     keys.NewURL(googleRootURL),
 	}, []byte{
 		// Type HTML
 		4,
@@ -80,7 +81,7 @@ func TestWriteElasticMetavalue(t *testing.T) {
 	})
 }
 
-func testLoaderMetavalue(t *testing.T, writer func(Key, metavalue, io.Writer) error, loader func([]byte) map[Key]metavalue) {
+func testLoaderMetavalue(t *testing.T, writer func(keys.Key, metavalue, io.Writer) error, loader func([]byte) map[keys.Key]metavalue) {
 	hash := sha256.Sum256([]byte("hello world"))
 	for i := 0; i < 12; i++ {
 		hash[i] = 0
@@ -91,7 +92,7 @@ func testLoaderMetavalue(t *testing.T, writer func(Key, metavalue, io.Writer) er
 		metavalue{
 			Type: TypeRedirect,
 			Time: 1671022548,
-			Hash: NewKeyURL(googleRootURL),
+			Hash: keys.NewURL(googleRootURL),
 		},
 		metavalue{
 			Type:     TypeFileHTML,
@@ -106,16 +107,16 @@ func testLoaderMetavalue(t *testing.T, writer func(Key, metavalue, io.Writer) er
 		},
 	}
 
-	expectedMetavalue := make(map[Key]metavalue, len(metavalueOrigin))
+	expectedMetavalue := make(map[keys.Key]metavalue, len(metavalueOrigin))
 	buff := bytes.Buffer{}
 	for i, m := range metavalueOrigin {
-		key := NewKeyString("https://www.google.com/" + strconv.Itoa(i))
+		key := keys.NewString("https://www.google.com/" + strconv.Itoa(i))
 		expectedMetavalue[key] = m
 
 		assert.NoError(t, writer(key, m, &buff))
 	}
 
-	key0 := NewKeyString("https://www.google.com/0")
+	key0 := keys.NewString("https://www.google.com/0")
 	assert.NoError(t, writer(key0, metavalue{Type: TypeNothing}, &buff))
 	delete(expectedMetavalue, key0)
 
@@ -130,11 +131,11 @@ func TestLoadElasticMetavalue(t *testing.T) {
 }
 
 func BenchmarkMetavalue(b *testing.B) {
-	key := NewKeyURL(googleRootURL)
+	key := keys.NewURL(googleRootURL)
 	buff := bytes.Buffer{}
 	buff.Grow(256 * keyMetavalueLen)
 
-	write := func(writer func(Key, metavalue, io.Writer) error) {
+	write := func(writer func(keys.Key, metavalue, io.Writer) error) {
 		buff.Reset()
 		// This value come from the first crawl.
 		for i := 0; i < 11228; i++ {
@@ -162,7 +163,7 @@ func BenchmarkMetavalue(b *testing.B) {
 	write(writeElasticMetavalue)
 	b.Log("elastic data len:", buff.Len())
 
-	bench := func(name string, writer func(Key, metavalue, io.Writer) error, loader func([]byte) map[Key]metavalue) {
+	bench := func(name string, writer func(keys.Key, metavalue, io.Writer) error, loader func([]byte) map[keys.Key]metavalue) {
 		b.Run(name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				write(writer)
