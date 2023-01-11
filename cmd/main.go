@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/common"
@@ -11,6 +9,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/index"
+	"github.com/HuguesGuilleus/isty-search/index/database"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"golang.org/x/exp/slog"
 	"net/url"
@@ -192,14 +191,7 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 	}
 
 	logger.Info("order.save")
-	wordsPath := filepath.Join(dbbase, "words.gob")
-	wordsFile, err := os.Create(wordsPath)
-	fatal(err)
-	defer wordsFile.Close()
-
-	if err := gob.NewEncoder(wordsFile).Encode(wordsIndex); err != nil {
-		return fmt.Errorf("Encode the words index in %q: %w", wordsPath, err)
-	}
+	indexdatabase.Store("words.db", wordsIndex)
 
 	return nil
 }
@@ -211,17 +203,9 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 	}
 	defer db.Close()
 
-	wordsPath := filepath.Join(dbbase, "words.gob")
-	logger.Info("words.read", "path", wordsPath)
-	wordsData, err := os.ReadFile(wordsPath)
+	wordsIndex, err := index.LoadVocabAdvanced("words.db")
 	if err != nil {
-		return fmt.Errorf("Read %q to get words index: %w", wordsPath, err)
-	}
-
-	logger.Info("words.decode")
-	wordsIndex := make(index.VocabAdvanced)
-	if err := gob.NewDecoder(bytes.NewReader(wordsData)).Decode(&wordsIndex); err != nil {
-		return fmt.Errorf("Decode %q to get words index: %w", wordsPath, err)
+		return fmt.Errorf("Load words index (in 'words.db'): %w", err)
 	}
 
 	result := wordsIndex[crawldatabase.NewKeyString("isty")]
