@@ -8,10 +8,13 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
+	"github.com/HuguesGuilleus/isty-search/display"
 	"github.com/HuguesGuilleus/isty-search/index"
 	"github.com/HuguesGuilleus/isty-search/index/database"
+	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"golang.org/x/exp/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -41,6 +44,7 @@ func main() {
 		"pagerank": mainPageRank,
 		"index":    mainIndex,
 		"search":   mainSearch,
+		"demoserv": mainDemoServ,
 	}
 	action := actions[flag.Arg(0)]
 	if action == nil {
@@ -178,7 +182,7 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 
 	logger.Info("order.pagerank")
 	scores := pageRank.Score(200)
-	globalOrder := make(map[crawldatabase.Key]float32, len(scores))
+	globalOrder := make(map[keys.Key]float32, len(scores))
 	for _, score := range scores {
 		globalOrder[score.Key] = score.Rank
 	}
@@ -203,12 +207,12 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 	}
 	defer db.Close()
 
-	wordsIndex, err := index.LoadVocabAdvanced("words.db")
+	wordsIndex, err := index.LoadVocabAdvanced(filepath.Join(dbbase, "words.db"))
 	if err != nil {
 		return fmt.Errorf("Load words index (in 'words.db'): %w", err)
 	}
 
-	result := wordsIndex[crawldatabase.NewKeyString("isty")]
+	result := wordsIndex[keys.NewString("isty")]
 	logger.Info("result.len", "len", len(result))
 	if len(result) > 20 {
 		result = result[:20]
@@ -226,4 +230,8 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 	}
 
 	return nil
+}
+
+func mainDemoServ(logger *slog.Logger, _ string) error {
+	return http.ListenAndServe(":8000", display.DemoServ(logger))
 }
