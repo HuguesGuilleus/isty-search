@@ -6,7 +6,27 @@
 	--color-2-light: #B7CDBE;
 }
 
+button,
+input {
+	all: unset;
+	display: block;
+	font-size: xx-large;
+	box-sizing: border-box;
+	background: #E0AE8F;
+	color: black;
+}
+button:focus,
+button:hover,
+input:focus,
+input:hover {
+	background: #E2844A;
+}
+
 footer {
 	padding: 1ex 0.5ex;
 	font-style: oblique;
+}
+
+.pixelated {
+	image-rendering: pixelated;
 }

@@ -11,7 +11,11 @@ import (
 
 var (
 	//go:embed image/favicon.ico
-	favicon []byte
+	imageFavicon []byte
+	//go:embed image/search-text.png
+	imageSearchText []byte
+	//go:embed image/tree.png
+	imageTree []byte
 
 	//go:embed css
 	cssFS    embed.FS

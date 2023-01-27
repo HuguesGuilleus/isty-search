@@ -33,15 +33,27 @@ func sendResult(w http.ResponseWriter, r *http.Request, query string, p int, que
 	page2html(buff, page{
 		Title: "Résultat",
 		Body: np("body.search",
-			np("div.search-top",
-				na(".search-top-home", "/", nt("span", "ISTY Search")),
-				nap("form.search-top-form", []string{"action=/search"},
-					nap(`input.search-top-form-bar`, []string{
-						"type=search",
-						"name=q",
-						`value=""`,
-						`placeholder="Mots clés de recherche"`}),
-					nap(`input.search-top-form-submit`, []string{"type=submit", `value="⇢"`}),
+			np("form.search-top",
+				na(".search-top-home.pixelated", "/", nap("img.search-top-home-img", []string{
+					"src=/image/tree.png",
+					"width=96", "height=96",
+					`title="Home"`,
+				})),
+
+				nap(`input.search-top-searchbar`, []string{
+					"type=search",
+					"name=q",
+					"value=" + strconv.Quote(query),
+					`placeholder="Mots clés de recherche"`}),
+
+				np("div.search-top-kind",
+					np("button.search-top-kind-buttonText",
+						nap("img.search-top-kind-buttonText-img.pixelated", []string{
+							"src=/image/search-text.png",
+							"width=13", "height=13",
+						}),
+						nt("span", "Text"),
+					),
 				),
 			),
 			np("div.search-query",

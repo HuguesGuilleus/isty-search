@@ -16,7 +16,7 @@ var home []byte = func() []byte {
 			np("div.home-search",
 				nt("div.home-search-title", "ISTY Search"),
 				nap("form.home-search-form", []string{"action=/result"},
-					nap(`input`, []string{
+					nap(`input.home-search-form-input`, []string{
 						"type=search",
 						"name=q",
 						`value=""`,

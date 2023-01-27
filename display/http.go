@@ -23,11 +23,17 @@ func Handler(logger *slog.Logger, querier Querier) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/favicon.ico":
-			serveStatic(w, "image/x-icon", favicon)
+			serveStatic(w, "image/x-icon", imageFavicon)
+		case "/image/search-text.png":
+			serveStatic(w, "image/png", imageSearchText)
+		case "/image/tree.png":
+			serveStatic(w, "image/png", imageTree)
 		case "/":
 			logger.Info("serv.static.home")
 			serveStatic(w, "text/html", home)
 
+		case "/r2":
+			fallthrough
 		case "/result":
 			query := r.URL.Query()
 			q := query.Get("q")
