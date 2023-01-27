@@ -1,0 +1,48 @@
+.search-top {
+	display: grid;
+	grid-template-columns: auto 1fr;
+
+	box-shadow: 0 0.5ex 0.5ex 0.1ex lightgrey;
+}
+
+form.search-top-form {
+	display: grid;
+	grid-template-columns: 1fr auto;
+}
+
+.search-results {
+	list-style: '';
+	padding: 2ex;
+}
+
+li.search-results-item {
+	margin: 2ex 0;
+	max-width: 60ex;
+	color: black;
+	padding: 0.5ex;
+}
+
+a.search-results-item {
+	text-decoration: none;
+	color: inherit;
+}
+
+.search-results-item:hover {
+	background: #B7CDBE;
+}
+
+.search-results-item-title {
+	font-weight: bold;
+}
+
+.search-results-item-info-time {
+	background: #ddd;
+	margin-right: 1ex;
+}
+.search-results-item-info-url {
+	color: #2A502E;
+}
+
+.search-results-item-desc {
+	font-weight: lighter;
+}

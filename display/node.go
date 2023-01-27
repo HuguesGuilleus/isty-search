@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"html"
 	"strings"
+	"time"
 )
 
 type page struct {
@@ -32,6 +33,10 @@ func page2html(buff *bytes.Buffer, p page) {
 
 // Encode node in html.
 func (n node) html(buff *bytes.Buffer) {
+	if n.NodeName == "" {
+		return
+	}
+
 	buff.WriteByte('<')
 	buff.WriteString(n.NodeName)
 	if n.ID != "" {
@@ -113,7 +118,7 @@ func nap(t string, attributes []string, children ...node) node {
 	}
 }
 
-// New node text
+// New text node
 func nt(t, content string) node {
 	nodeName, id, classes := splitName(t)
 	return node{
@@ -121,6 +126,39 @@ func nt(t, content string) node {
 		ID:       id,
 		Classes:  classes,
 		Content:  content,
+	}
+}
+
+// New time node.
+func ntime(t string, ti time.Time) node {
+	if ti.IsZero() {
+		return node{}
+	}
+
+	b := make([]byte, 0, len(time.RFC3339)+11)
+	b = append(b, `datetime="`...)
+	b = ti.AppendFormat(b, time.RFC3339)
+	b = append(b, '"')
+
+	_, id, classes := splitName(t)
+	return node{
+		NodeName:   "time",
+		ID:         id,
+		Classes:    classes,
+		Attributes: []string{string(b)},
+		Content:    ti.String(),
+	}
+}
+
+// New anchor node
+func na(t, u string, children ...node) node {
+	_, id, classes := splitName(t)
+	return node{
+		NodeName:   "a",
+		ID:         id,
+		Classes:    classes,
+		Attributes: []string{`href="` + u + `"`},
+		Children:   children,
 	}
 }
 

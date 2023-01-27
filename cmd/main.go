@@ -233,5 +233,25 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 }
 
 func mainDemoServ(logger *slog.Logger, _ string) error {
-	return http.ListenAndServe(":8000", display.DemoServ(logger))
+	logger.Info("listen", "address", ":8000")
+	return http.ListenAndServe(":8000", display.Handler(logger, fakeQuerier{}))
+}
+
+type fakeQuerier struct{}
+
+func (_ fakeQuerier) QueryText(_ string) []display.PageResult {
+	result := display.PageResult{
+		Title:            "titre 1",
+		Description:      "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+		LastModification: time.Now().UTC(),
+		URL:              *common.ParseURL("https://github.com/"),
+	}
+
+	return []display.PageResult{
+		result, result, result, result,
+		result, result, result, result,
+		result, result, result, result,
+		result, result, result, result,
+		result, result, result, result,
+	}
 }

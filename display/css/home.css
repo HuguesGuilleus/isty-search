@@ -27,7 +27,7 @@ body.home > * {
 	padding: 1.7ex;
 }
 .home-top-anchor {
-	display: inline-inline-block;
+	display: inline-block;
 	margin-right: 1.5ex;
 	border-radius: 1.3ex;
 	padding: 0.5ex 0.6ex;
@@ -82,9 +82,4 @@ input:hover {
 	background: #E0AE8F;
 	background: #E4986A;
 	background: #E2844A;
-}
-
-footer {
-	padding: 1ex 0.5ex;
-	font-style: oblique;
 }

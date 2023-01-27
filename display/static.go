@@ -10,6 +10,9 @@ import (
 )
 
 var (
+	//go:embed image/favicon.ico
+	favicon []byte
+
 	//go:embed css
 	cssFS    embed.FS
 	cssBytes = concatMinify(cssFS, css.Minify)

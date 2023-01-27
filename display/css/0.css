@@ -5,3 +5,8 @@
 	--color-2-dark: #2A502E;
 	--color-2-light: #B7CDBE;
 }
+
+footer {
+	padding: 1ex 0.5ex;
+	font-style: oblique;
+}

@@ -4,6 +4,8 @@ import (
 	"bytes"
 )
 
+// <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
 var home []byte = func() []byte {
 	buff := bytes.Buffer{}
 	page2html(&buff, page{
@@ -13,7 +15,7 @@ var home []byte = func() []byte {
 			np("div.home-space1"),
 			np("div.home-search",
 				nt("div.home-search-title", "ISTY Search"),
-				nap("form.home-search-form", []string{"action=/search"},
+				nap("form.home-search-form", []string{"action=/result"},
 					nap(`input`, []string{
 						"type=search",
 						"name=q",
