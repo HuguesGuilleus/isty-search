@@ -28,13 +28,11 @@ func main() {
 	db := flag.String("db", "db1", "dataBase directory path (can not exist)")
 	flag.Parse()
 
-	os.MkdirAll(filepath.Join(*db, "log"), 0o775)
-	jsonLogFile, err := os.Create(filepath.Join(*db, "log", time.Now().UTC().Format("2006-01-02_15-04-05Z.log")))
-	fatal(err)
-
+	jsonLogCloser, jsonHandler := sloghandlers.NewFileHandler(*db, slog.InfoLevel)
+	defer jsonLogCloser()
 	logger := slog.New(sloghandlers.NewMultiHandlers(
 		sloghandlers.NewConsole(slog.InfoLevel),
-		slog.NewJSONHandler(jsonLogFile),
+		jsonHandler,
 	))
 
 	actions := map[string]func(logger *slog.Logger, dbbase string) error{
@@ -56,7 +54,7 @@ func main() {
 	}
 
 	defer func(begin time.Time) { logger.Info("duration", "d", time.Since(begin)) }(time.Now())
-	err = action(logger, *db)
+	err := action(logger, *db)
 	fatal(err)
 }
 
