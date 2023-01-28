@@ -15,7 +15,7 @@ func TestCounterPage(t *testing.T) {
 }
 
 func TestCounterVocab(t *testing.T) {
-	root, err := htmlnode.Parse([]byte("<p> a \t   bb  0 Hello WORD!\nHELLO yolo</p>"))
+	root, err := htmlnode.Parse([]byte("<p> a \t   bb  0 Hello WORD!\nHELLO yolo fffffffffffff</p>"))
 	assert.NoError(t, err)
 
 	counter := make(CounterVocab)
