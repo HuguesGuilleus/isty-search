@@ -132,20 +132,20 @@ func mainVocab(logger *slog.Logger, dbbase string) error {
 	}
 	defer db.Close()
 
-	pageCounter := index.PageCounter(0)
-	// vocabCounter := make(index.VocabCounter)
-	allvocab := make(index.VocabAdvanced)
-	if err := crawler.Process(db, logger, &pageCounter, allvocab); err != nil {
+	counterPage := index.CounterPage(0)
+	counterWords := make(index.CounterVocab)
+	if err := crawler.Process(db, logger, &counterPage, counterWords); err != nil {
 		return err
 	}
 
-	logger.Info("vocab.stats", "page", pageCounter, "words", len(allvocab))
-	wordsLen := 0
-	for word := range allvocab {
-		wordsLen += len(word)
+	logger.Info("vocab.stats", "page", counterPage, "wordsCount", len(counterWords), "wordsSum", counterWords.Sum())
+	frequency := counterWords.Frequency()
+	if len(frequency) > 100 {
+		frequency = frequency[:100]
 	}
-	logger.Info("vocab.allword", "len", "wordsLen")
-	// logger.Info("vocab.stats", "page", pageCounter, "words", len(vocabCounter), "occuenrence", vocabCounter.TotalWords())
+	for _, w := range frequency {
+		logger.Info("vocab.frequency", "count", w.Count, "word", w.Word)
+	}
 
 	return nil
 }

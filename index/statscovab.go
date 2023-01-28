@@ -6,7 +6,6 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/index/database"
 	"github.com/HuguesGuilleus/isty-search/keys"
-	"strings"
 )
 
 type VocabAdvanced map[keys.Key]VocabAdvancedSlice
@@ -20,13 +19,7 @@ func (advanced VocabAdvanced) Process(page *crawler.Page) {
 	counter := make(map[string]int32)
 
 	page.Html.Body.Visit(func(node htmlnode.Node) {
-		text := node.Text
-		text = strings.TrimSpace(text)
-		text = strings.ToLower(text)
-		if text == "" {
-			return
-		}
-		for _, word := range strings.FieldsFunc(text, splitWords) {
+		for _, word := range getVocab(node.Text) {
 			counter[word]++
 		}
 	})
@@ -56,7 +49,6 @@ func (slice VocabAdvancedSlice) MarshalBinary() ([]byte, error) {
 func LoadVocabAdvanced(file string) (VocabAdvanced, error) {
 	return indexdatabase.Load(file, unmarshalVocabAdvancedSlice)
 }
-
 func unmarshalVocabAdvancedSlice(data []byte) (VocabAdvancedSlice, error) {
 	const itemLen = keys.Len + 4
 	if len(data)%itemLen != 0 {
