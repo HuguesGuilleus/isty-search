@@ -203,24 +203,11 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 		return fmt.Errorf("Load words index (in 'words.db'): %w", err)
 	}
 
-	result := wordsIndex[keys.NewString("isty")]
-	logger.Info("result.len", "len", len(result))
-	if len(result) > 20 {
-		result = result[:20]
-	}
-	for i, pageResult := range result {
-		page, _, err := db.GetValue(pageResult.Page)
-		if err != nil {
-			return fmt.Errorf("Get value([i:%d] %s): %w", i, pageResult.Page, err)
-		}
-		logger.Info("result",
-			"i", i,
-			"url", page.URL.String(),
-			"title", page.Html.Meta.Title,
-		)
-	}
-
-	return nil
+	logger.Info("listen", "address", ":8000")
+	return http.ListenAndServe(":8000", display.Handler(logger, &index.RealQuerier{
+		DB:    db,
+		Words: wordsIndex,
+	}))
 }
 
 func mainDemoServ(logger *slog.Logger, _ string) error {
