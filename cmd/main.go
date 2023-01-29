@@ -24,6 +24,16 @@ import (
 	"time"
 )
 
+var actions = map[string]func(logger *slog.Logger, dbbase string) error{
+	"crawl":    mainCrawl,
+	"vocab":    mainVocab,
+	"stats":    mainDBStatistics,
+	"pagerank": mainPageRank,
+	"index":    mainIndex,
+	"search":   mainSearch,
+	"demoserv": mainDemoServ,
+}
+
 func main() {
 	db := flag.String("db", "db1", "dataBase directory path (can not exist)")
 	flag.Parse()
@@ -35,31 +45,14 @@ func main() {
 		jsonHandler,
 	))
 
-	actions := map[string]func(logger *slog.Logger, dbbase string) error{
-		"crawl":    mainCrawl,
-		"vocab":    mainVocab,
-		"stats":    mainDBStatistics,
-		"pagerank": mainPageRank,
-		"index":    mainIndex,
-		"search":   mainSearch,
-		"demoserv": mainDemoServ,
-	}
-	action := actions[flag.Arg(0)]
-	if action == nil {
+	defer func(begin time.Time) { logger.Info("duration", "d", time.Since(begin)) }(time.Now())
+	if action := actions[flag.Arg(0)]; action == nil {
 		fmt.Println("Unknown action. Possible actions are:")
 		for name := range actions {
 			fmt.Printf("\t%s\n", name)
 		}
 		os.Exit(1)
-	}
-
-	defer func(begin time.Time) { logger.Info("duration", "d", time.Since(begin)) }(time.Now())
-	err := action(logger, *db)
-	fatal(err)
-}
-
-func fatal(err error) {
-	if err != nil {
+	} else if err := action(logger, *db); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
