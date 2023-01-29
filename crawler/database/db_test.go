@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"testing"
 	"time"
 )
@@ -172,8 +173,7 @@ func TestForHTML(t *testing.T) {
 		assert.Equal(t, 3, total)
 		assert.Nil(t, readed[key])
 		readed[key] = c
-		assert.Equal(t, globalInc, i)
-		assert.Equal(t, globalInc, c.MaxAge-1)
+		assert.Equal(t, i, c.MaxAge-1)
 		globalInc++
 	})
 	assert.NoError(t, err)
@@ -184,12 +184,13 @@ func TestForHTML(t *testing.T) {
 	}, readed)
 
 	// Log records
+	sort.Strings(*records)
 	assert.Equal(t, []string{
-		"INFO [db.open] base=__db",
 		"INFO [%] %i=+000 %len=+003",
 		"INFO [%] %i=+001 %len=+003",
 		"INFO [%] %i=+002 %len=+003",
 		"INFO [%end]",
+		"INFO [db.open] base=__db",
 	}, *records)
 }
 

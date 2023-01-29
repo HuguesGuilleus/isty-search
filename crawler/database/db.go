@@ -15,8 +15,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -366,37 +368,64 @@ func (db *Database[_]) SetRedirect(key, destination keys.Key) error {
 	return nil
 }
 
+type keyvalue[T any] struct {
+	k keys.Key
+	v *T
+}
+
 // Iterate for each element of type TypeFileHTML.
 //
 // Log the progession with the intern logger.
-func (db *Database[T]) ForHTML(f func(keys.Key, *T, int, int)) error {
+func (db *Database[T]) ForHTML(f func(keys.Key, *T, int, int)) (returnErr error) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	items := make([]keymetavalue, 0, len(db.mapMeta))
 	for key, meta := range db.mapMeta {
-		if meta.Type < TypeFile || TypeError <= meta.Type {
+		if meta.Type != TypeFileHTML {
 			continue
 		}
 		items = append(items, keymetavalue{key, meta})
 	}
-
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].meta.Position < items[j].meta.Position
 	})
 
-	l := len(items)
-	for i, item := range items {
-		v, err := db.readValue(item.key, item.meta)
-		if err != nil {
-			return err
-		}
-		db.logger.Info("%", "%i", i, "%len", l)
-		f(item.key, v, i, l)
-	}
-	db.logger.Info("%end")
+	callMutex := sync.Mutex{}
+	goroutine := sync.WaitGroup{}
+	goroutine.Add(runtime.NumCPU())
 
-	return nil
+	defer db.logger.Info("%end")
+	defer goroutine.Wait()
+
+	globalIndex := new(int64)
+	*globalIndex = -1
+	for g := 0; g < runtime.NumCPU(); g++ {
+		go func() {
+			defer goroutine.Done()
+			for {
+				i := int(atomic.AddInt64(globalIndex, 1))
+				if i >= len(items) {
+					return
+				}
+				item := items[i]
+
+				v, err := db.readValue(item.key, item.meta)
+				if err != nil {
+					returnErr = err
+					continue
+				}
+
+				callMutex.Lock()
+				db.logger.Info("%", "%i", i, "%len", len(items))
+				f(item.key, v, i, len(items))
+				i++
+				callMutex.Unlock()
+			}
+		}()
+	}
+
+	return
 }
 
 // Return all redictions to valid file.
