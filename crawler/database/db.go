@@ -400,6 +400,7 @@ func (db *Database[T]) ForHTML(f func(keys.Key, *T)) (returnErr error) {
 
 	globalIndex := new(int64)
 	*globalIndex = -1
+	indexLogged := 0
 	for g := 0; g < runtime.NumCPU(); g++ {
 		go func() {
 			defer goroutine.Done()
@@ -417,9 +418,9 @@ func (db *Database[T]) ForHTML(f func(keys.Key, *T)) (returnErr error) {
 				}
 
 				callMutex.Lock()
-				db.logger.Info("%", "%i", i, "%len", len(items))
+				db.logger.Info("%", "%i", indexLogged, "%len", len(items))
+				indexLogged++
 				f(item.key, v)
-				i++
 				callMutex.Unlock()
 			}
 		}()
