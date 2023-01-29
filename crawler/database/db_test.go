@@ -169,11 +169,9 @@ func TestForHTML(t *testing.T) {
 	// Check ForHTML caller
 	readed := make(map[keys.Key]*http.Cookie, 3)
 	globalInc := 0
-	err = db.ForHTML(func(key keys.Key, c *http.Cookie, i, total int) {
-		assert.Equal(t, 3, total)
+	err = db.ForHTML(func(key keys.Key, c *http.Cookie) {
 		assert.Nil(t, readed[key])
 		readed[key] = c
-		assert.Equal(t, i, c.MaxAge-1)
 		globalInc++
 	})
 	assert.NoError(t, err)

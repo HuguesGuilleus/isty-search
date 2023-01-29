@@ -106,7 +106,6 @@ func TestCrawl(t *testing.T) {
 	// Test the process
 	foundURL := []string{}
 	assert.NoError(t, Process(db,
-		slog.New(sloghandlers.NewNullHandler()),
 		ProcessFunc(func(page *Page) {
 			foundURL = append(foundURL, page.URL.String())
 		}),

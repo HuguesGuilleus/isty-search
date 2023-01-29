@@ -132,7 +132,7 @@ func mainVocab(logger *slog.Logger, dbbase string) error {
 
 	counterPage := index.CounterPage(0)
 	counterWords := make(index.CounterVocab)
-	if err := crawler.Process(db, logger, &counterPage, counterWords); err != nil {
+	if err := crawler.Process(db, &counterPage, counterWords); err != nil {
 		return err
 	}
 
@@ -156,7 +156,7 @@ func mainPageRank(logger *slog.Logger, dbbase string) error {
 	defer db.Close()
 
 	pageRank := index.NewPageRank()
-	if err := crawler.Process(db, logger, &pageRank); err != nil {
+	if err := crawler.Process(db, &pageRank); err != nil {
 		return err
 	}
 	pageRank.DevScore()
@@ -174,7 +174,7 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 
 	wordsIndex := make(index.VocabAdvanced)
 	pageRank := index.NewPageRank()
-	if err := crawler.Process(db, logger, &pageRank, &wordsIndex); err != nil {
+	if err := crawler.Process(db, &pageRank, &wordsIndex); err != nil {
 		return err
 	}
 

@@ -376,7 +376,7 @@ type keyvalue[T any] struct {
 // Iterate for each element of type TypeFileHTML.
 //
 // Log the progession with the intern logger.
-func (db *Database[T]) ForHTML(f func(keys.Key, *T, int, int)) (returnErr error) {
+func (db *Database[T]) ForHTML(f func(keys.Key, *T)) (returnErr error) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -418,7 +418,7 @@ func (db *Database[T]) ForHTML(f func(keys.Key, *T, int, int)) (returnErr error)
 
 				callMutex.Lock()
 				db.logger.Info("%", "%i", i, "%len", len(items))
-				f(item.key, v, i, len(items))
+				f(item.key, v)
 				i++
 				callMutex.Unlock()
 			}
