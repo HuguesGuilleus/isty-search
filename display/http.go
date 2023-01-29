@@ -1,25 +1,13 @@
 package display
 
 import (
+	"github.com/HuguesGuilleus/isty-search/index"
 	"golang.org/x/exp/slog"
 	"net/http"
-	"net/url"
 	"strconv"
-	"time"
 )
 
-// The system that get the result for a query.
-type Querier interface {
-	QueryText(query string) []PageResult
-}
-
-type PageResult struct {
-	Title, Description string
-	LastModification   time.Time
-	URL                url.URL
-}
-
-func Handler(logger *slog.Logger, querier Querier) http.Handler {
+func Handler(logger *slog.Logger, querier index.Querier) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/favicon.ico":
@@ -32,8 +20,6 @@ func Handler(logger *slog.Logger, querier Querier) http.Handler {
 			logger.Info("serv.static.home")
 			serveStatic(w, "text/html", home)
 
-		case "/r2":
-			fallthrough
 		case "/result":
 			query := r.URL.Query()
 			q := query.Get("q")

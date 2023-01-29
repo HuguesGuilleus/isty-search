@@ -2,12 +2,13 @@ package display
 
 import (
 	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/index"
 	"net/http"
 	"strconv"
 )
 
-func sendResult(w http.ResponseWriter, r *http.Request, query string, p int, querier Querier) {
-	result := querier.QueryText(query)
+func sendResult(w http.ResponseWriter, r *http.Request, query string, p int, querier index.Querier) {
+	_, result := querier.QueryText(query)
 	resultLen := len(result)
 	if len(result) > 10 {
 		result = result[:10]
