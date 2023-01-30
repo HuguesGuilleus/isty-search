@@ -19,3 +19,13 @@ func NewString(s string) Key { return Key(sha256.Sum256([]byte(s))) }
 
 // Return the value in hexadecimal
 func (key Key) String() string { return hex.EncodeToString(key[:]) }
+
+func (k1 *Key) Less(k2 *Key) bool {
+	for i, v1 := range *k1 {
+		v2 := (*k2)[i]
+		if v1 != v2 {
+			return v1 < v2
+		}
+	}
+	return false
+}

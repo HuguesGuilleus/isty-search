@@ -12,3 +12,8 @@ func TestKey(t *testing.T) {
 		NewURL(common.ParseURL("https://www.google.com/search/howsearchworks/?fg=1")).String(),
 	)
 }
+
+func TestCompare(t *testing.T) {
+	assert.True(t, (&Key{0, 1, 3}).Less(&Key{0, 1, 5}))
+	assert.False(t, (&Key{}).Less(&Key{}))
+}
