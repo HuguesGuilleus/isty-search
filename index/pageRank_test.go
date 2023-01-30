@@ -37,15 +37,13 @@ func keyStringer(key keys.Key) string {
 }
 
 func TestPageRank(t *testing.T) {
-	pr := PageRank{
-		links: map[keys.Key][]keys.Key{
-			pageA: {pageC},
-			pageB: {pageA, pageX, pageA},
-			pageC: {pageA, pageY},
-			pageD: {pageB, pageC, pageD, pageY},
-		},
-	}
-	scores := pr.Score(1)
+	scores := score(map[keys.Key][]keys.Key{
+		pageA: {pageC},
+		pageB: {pageA, pageX, pageA},
+		pageC: {pageA, pageY},
+		pageD: {pageB, pageC, pageD, pageY},
+	}, 1)
+
 	expected := []Score{
 		Score{Key: pageA, Rank: 2.0},
 		Score{Key: pageC, Rank: 1.5},
@@ -68,15 +66,13 @@ func TestPageRank(t *testing.T) {
 }
 
 func TestPageRankFilter(t *testing.T) {
-	pr := PageRank{
-		links: map[keys.Key][]keys.Key{
-			pageA: {pageC},
-			pageB: {pageA, pageX, pageA},
-			pageC: {pageA, pageY},
-			pageD: {pageB, pageD, pageY},
-		},
+	allLinks := map[keys.Key][]keys.Key{
+		pageA: {pageC},
+		pageB: {pageA, pageX, pageA},
+		pageC: {pageA, pageY},
+		pageD: {pageB, pageD, pageY},
 	}
-	pr.filterKey()
+	pageRankFilter(allLinks)
 
 	expected := map[keys.Key][]keys.Key{
 		pageA: {pageC},
@@ -84,7 +80,7 @@ func TestPageRankFilter(t *testing.T) {
 		pageC: {pageA},
 		pageD: {pageB},
 	}
-	if !reflect.DeepEqual(expected, pr.links) {
+	if !reflect.DeepEqual(expected, allLinks) {
 		print := func(m map[keys.Key][]keys.Key) {
 			t.Logf("map len: %d", len(m))
 			for key, links := range m {
@@ -101,7 +97,7 @@ func TestPageRankFilter(t *testing.T) {
 		print(expected)
 		t.Log("")
 		t.Log("received:")
-		print(pr.links)
+		print(allLinks)
 	}
 }
 

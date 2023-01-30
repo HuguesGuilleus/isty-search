@@ -65,25 +65,32 @@ func (pr *PageRank) DevScore() {
 	}
 }
 
-func (pr *PageRank) Score(repeat int) []Score {
-	pr.filterKey()
+func (pr *PageRank) Score(repeat int) []Score { return score(pr.links, repeat) }
 
-	key2index := make(map[keys.Key]int, len(pr.links))
-	index2key := make([]keys.Key, len(pr.links))
+func score(allLinks map[keys.Key][]keys.Key, repeat int) []Score {
+	pageRankFilter(allLinks)
+
+	key2index := make(map[keys.Key]int, len(allLinks))
+	index2key := make([]keys.Key, len(allLinks))
 	i := 0
-	for key := range pr.links {
+	totalLinks := 0
+	for key, links := range allLinks {
 		index2key[i] = key
 		key2index[key] = i
 		i++
+		totalLinks += len(links)
 	}
-	pages := make([][]int, len(pr.links))
-	for i := range pages {
-		linksKey := pr.links[index2key[i]]
-		linksIndex := make([]int, len(linksKey))
-		for i, link := range linksKey {
-			linksIndex[i] = key2index[link]
+
+	pagesLinks := make([]int, totalLinks)
+	i = 0
+	pages := make([][]int, len(allLinks))
+	for key, links := range allLinks {
+		begin := i
+		for _, link := range links {
+			pagesLinks[i] = key2index[link]
+			i++
 		}
-		pages[i] = linksIndex
+		pages[key2index[key]] = pagesLinks[begin:i]
 	}
 
 	rank := pageRankMultiplication(pages, repeat)
@@ -100,20 +107,24 @@ func (pr *PageRank) Score(repeat int) []Score {
 }
 
 // Filter unknown key, double key, and key pointed to the page key.
-func (pr *PageRank) filterKey() {
-	for key, links := range pr.links {
-		i := 0
-		sort.Slice(links, func(i, j int) bool { return bytes.Compare(links[i][:], links[j][:]) < 0 })
+func pageRankFilter(allLinks map[keys.Key][]keys.Key) {
+	for key, links := range allLinks {
+		sort.Slice(links, func(i, j int) bool {
+			return bytes.Compare(links[i][:], links[j][:]) < 0
+		})
+		writeIndex := 0
 		previous := keys.Key{}
 		for _, linkKey := range links {
-			if _, exist := pr.links[linkKey]; !exist || key == linkKey || bytes.Equal(previous[:], linkKey[:]) {
+			if key == linkKey || previous == linkKey {
+				continue
+			} else if _, exist := allLinks[linkKey]; !exist {
 				continue
 			}
 			previous = linkKey
-			links[i] = linkKey
-			i++
+			links[writeIndex] = linkKey
+			writeIndex++
 		}
-		pr.links[key] = links[:i]
+		allLinks[key] = links[:writeIndex]
 	}
 }
 
