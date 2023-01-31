@@ -37,12 +37,13 @@ func keyStringer(key keys.Key) string {
 }
 
 func TestPageRank(t *testing.T) {
-	scores := score(map[keys.Key][]keys.Key{
+	repeat, scores := score(map[keys.Key][]keys.Key{
 		pageA: {pageC},
 		pageB: {pageA, pageX, pageA},
 		pageC: {pageA, pageY},
 		pageD: {pageB, pageC, pageD, pageY},
-	}, 1)
+	}, 1, 0.0)
+	assert.Equal(t, 1, repeat)
 
 	expected := []Score{
 		Score{Key: pageA, Rank: 2.0},
@@ -108,8 +109,17 @@ func TestPageRankMultiplication(t *testing.T) {
 		2: []int{0},
 		3: []int{1, 2},
 	}
-	assert.Equal(t, []float32{2.0, 0.5, 1.5, 0.0}, pageRankMultiplication(pages, 1))
-	for i := 2; i < 10; i++ {
-		assert.Equal(t, []float32{2.0, 0, 2.0, 0}, pageRankMultiplication(pages, i))
+	repeat, rank := pageRankMultiplication(pages, 1, 0.0)
+	assert.Equal(t, []float32{2.0, 0.5, 1.5, 0.0}, rank)
+	assert.Equal(t, 1, repeat)
+
+	repeat, rank = pageRankMultiplication(pages, 2, 0.0)
+	assert.Equal(t, []float32{2.0, 0, 2.0, 0}, rank)
+	assert.Equal(t, 2, repeat)
+
+	for i := 3; i < 100; i++ {
+		repeat, rank = pageRankMultiplication(pages, i, 0.0)
+		assert.Equal(t, []float32{2.0, 0, 2.0, 0}, rank)
+		assert.Equal(t, 3, repeat)
 	}
 }

@@ -54,7 +54,7 @@ func (pr *PageRank) DevStats(logger *slog.Logger) {
 
 // Run pr.Score(), sort the result and print beter line.
 func (pr *PageRank) DevScore() {
-	scores := pr.Score(200)
+	_, scores := pr.Score(200, 0.001)
 
 	if len(scores) > 30 {
 		scores = scores[:30]
@@ -65,9 +65,11 @@ func (pr *PageRank) DevScore() {
 	}
 }
 
-func (pr *PageRank) Score(repeat int) []Score { return score(pr.links, repeat) }
+func (pr *PageRank) Score(repeat int, epsilon float32) (int, []Score) {
+	return score(pr.links, repeat, epsilon)
+}
 
-func score(allLinks map[keys.Key][]keys.Key, repeat int) []Score {
+func score(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (int, []Score) {
 	pageRankFilter(allLinks)
 
 	key2index := make(map[keys.Key]int, len(allLinks))
@@ -93,7 +95,7 @@ func score(allLinks map[keys.Key][]keys.Key, repeat int) []Score {
 		pages[key2index[key]] = pagesLinks[begin:i]
 	}
 
-	rank := pageRankMultiplication(pages, repeat)
+	repeatition, rank := pageRankMultiplication(pages, repeat, epsilon)
 	scores := make([]Score, len(rank))
 	for i, rank := range rank {
 		scores[i] = Score{
@@ -103,7 +105,7 @@ func score(allLinks map[keys.Key][]keys.Key, repeat int) []Score {
 	}
 
 	SortScores(scores)
-	return scores
+	return repeatition, scores
 }
 
 // Filter unknown key, double key, and key pointed to the page key.
@@ -128,14 +130,15 @@ func pageRankFilter(allLinks map[keys.Key][]keys.Key) {
 	}
 }
 
-func pageRankMultiplication(pages [][]int, repeat int) []float32 {
+func pageRankMultiplication(pages [][]int, maxRepeat int, epsilon float32) (int, []float32) {
 	oldRank := make([]float32, len(pages))
 	newRank := make([]float32, len(pages))
 	for i := range newRank {
 		newRank[i] = 1.0
 	}
 
-	for i := 0; i < repeat; i++ {
+	r := 0
+	for ; r < maxRepeat && epsilon < norm2(oldRank, newRank); r++ {
 		oldRank, newRank = newRank, oldRank
 		for i := range newRank {
 			newRank[i] = 0
@@ -149,5 +152,14 @@ func pageRankMultiplication(pages [][]int, repeat int) []float32 {
 		}
 	}
 
-	return newRank
+	return r, newRank
+}
+
+// Return ||v1-v2||^2
+func norm2(v1, v2 []float32) (sum float32) {
+	for i, f1 := range v1 {
+		v := f1 - v2[i]
+		sum += v * v
+	}
+	return
 }
