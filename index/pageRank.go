@@ -1,8 +1,6 @@
 package index
 
 import (
-	"bytes"
-	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/keys"
 	"golang.org/x/exp/slog"
@@ -11,13 +9,11 @@ import (
 
 type PageRank struct {
 	links map[keys.Key][]keys.Key
-	urls  map[keys.Key]string // only for dev
 }
 
 func NewPageRank() PageRank {
 	return PageRank{
 		links: make(map[keys.Key][]keys.Key),
-		urls:  make(map[keys.Key]string),
 	}
 }
 
@@ -30,7 +26,6 @@ func (pr *PageRank) Process(page *crawler.Page) {
 		i++
 	}
 	pr.links[keys.NewURL(&page.URL)] = links
-	pr.urls[keys.NewURL(&page.URL)] = page.URL.String()
 }
 
 func (pr *PageRank) DevStats(logger *slog.Logger) {
@@ -49,19 +44,6 @@ func (pr *PageRank) DevStats(logger *slog.Logger) {
 	logger.Info("pr.stats", "page", len(pr.links), "max", max)
 	for i, count := range distribution {
 		logger.Info("pr.distribution", "i", i, "count", count)
-	}
-}
-
-// Run pr.Score(), sort the result and print beter line.
-func (pr *PageRank) DevScore() {
-	_, scores := pr.Score(200, 0.001)
-
-	if len(scores) > 30 {
-		scores = scores[:30]
-	}
-
-	for _, score := range scores {
-		fmt.Printf("%2.3f %s\n", score.Rank, pr.urls[score.Key])
 	}
 }
 
@@ -112,7 +94,7 @@ func score(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (int, 
 func pageRankFilter(allLinks map[keys.Key][]keys.Key) {
 	for key, links := range allLinks {
 		sort.Slice(links, func(i, j int) bool {
-			return bytes.Compare(links[i][:], links[j][:]) < 0
+			return links[i].Less(&links[j])
 		})
 		writeIndex := 0
 		previous := keys.Key{}

@@ -25,13 +25,13 @@ import (
 )
 
 var actions = map[string]func(logger *slog.Logger, dbbase string) error{
-	"crawl":    mainCrawl,
-	"vocab":    mainVocab,
-	"stats":    mainDBStatistics,
-	"pagerank": mainPageRank,
-	"index":    mainIndex,
-	"search":   mainSearch,
-	"demoserv": mainDemoServ,
+	"crawl":         mainCrawl,
+	"dbstats":       mainDBStatistics,
+	"index":         mainIndex,
+	"search":        mainSearch,
+	"demo-vocab":    mainDemoVocab,
+	"demo-pagerank": mainDemoPageRank,
+	"demo-search":   mainDemoSearch,
 }
 
 func main() {
@@ -116,44 +116,66 @@ func mainDBStatistics(logger *slog.Logger, dbbase string) error {
 	return nil
 }
 
-func mainVocab(logger *slog.Logger, dbbase string) error {
+func mainDemoVocab(logger *slog.Logger, dbbase string) error {
 	_, db, err := crawldatabase.Open[crawler.Page](logger, dbbase, false)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	counterPage := index.CounterPage(0)
+	countHTML := db.Statistics().Count[crawldatabase.TypeFileHTML]
+	logger.Info("demo.db.page", "count", countHTML)
+
 	counterWords := make(index.CounterVocab)
-	if err := crawler.Process(db, &counterPage, counterWords); err != nil {
+	if err := crawler.Process(db, counterWords); err != nil {
 		return err
 	}
 
-	logger.Info("vocab.stats", "page", counterPage, "wordsCount", len(counterWords), "wordsSum", counterWords.Sum())
+	logger.Info("demo.vocab.stats",
+		"wordsCount", len(counterWords),
+		"wordsSum", counterWords.Sum())
+
 	frequency := counterWords.Frequency()
 	if len(frequency) > 100 {
 		frequency = frequency[:100]
 	}
 	for _, w := range frequency {
-		logger.Info("vocab.frequency", "count", w.Count, "word", w.Word)
+		logger.Info("demo.vocab.frequency", "count", w.Count, "word", w.Word)
 	}
 
 	return nil
 }
 
-func mainPageRank(logger *slog.Logger, dbbase string) error {
+func mainDemoPageRank(logger *slog.Logger, dbbase string) error {
 	_, db, err := crawldatabase.Open[crawler.Page](logger, dbbase, false)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
+	countHTML := db.Statistics().Count[crawldatabase.TypeFileHTML]
+	logger.Info("demo.db.page", "count", countHTML)
+
 	pageRank := index.NewPageRank()
 	if err := crawler.Process(db, &pageRank); err != nil {
 		return err
 	}
-	pageRank.DevScore()
-	pageRank.DevStats(logger)
+
+	repeatition, scores := pageRank.Score(1000, 0.00_01)
+	logger.Info("demo.pagerank.repeatition", "nb", repeatition)
+
+	if len(scores) > 30 {
+		scores = scores[:30]
+	}
+	for _, score := range scores {
+		page, _, err := db.GetValue(score.Key)
+		if err != nil {
+			return err
+		}
+		logger.Info("demo.pagerank.x", "rank", score.Rank, "url", page.URL.String())
+	}
+
+	// pageRank.DevStats(logger)
 
 	return nil
 }
@@ -172,7 +194,7 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 	}
 
 	logger.Info("order.pagerank")
-	scores := pageRank.Score(200)
+	_, scores := pageRank.Score(200, 0.00_001)
 	globalOrder := make(map[keys.Key]float32, len(scores))
 	for _, score := range scores {
 		globalOrder[score.Key] = score.Rank
@@ -210,7 +232,7 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 	}))
 }
 
-func mainDemoServ(logger *slog.Logger, _ string) error {
+func mainDemoSearch(logger *slog.Logger, _ string) error {
 	logger.Info("listen", "address", ":8000")
 	return http.ListenAndServe(":8000", display.Handler(logger, index.FakeQuerier()))
 }
