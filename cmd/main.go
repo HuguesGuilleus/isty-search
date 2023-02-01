@@ -122,9 +122,7 @@ func mainDemoVocab(logger *slog.Logger, dbbase string) error {
 		return err
 	}
 	defer db.Close()
-
-	countHTML := db.Statistics().Count[crawldatabase.TypeFileHTML]
-	logger.Info("demo.db.page", "count", countHTML)
+	logger.Info("demo.db.page", "count", db.CountHTML())
 
 	counterWords := make(index.CounterVocab)
 	if err := crawler.Process(db, counterWords); err != nil {
@@ -152,9 +150,7 @@ func mainDemoPageRank(logger *slog.Logger, dbbase string) error {
 		return err
 	}
 	defer db.Close()
-
-	countHTML := db.Statistics().Count[crawldatabase.TypeFileHTML]
-	logger.Info("demo.db.page", "count", countHTML)
+	logger.Info("demo.db.page", "count", db.CountHTML())
 
 	links := index.NewLinks(db.Redirections())
 	if err := crawler.Process(db, &links); err != nil {

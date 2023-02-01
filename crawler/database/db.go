@@ -177,6 +177,11 @@ func (db *Database[_]) Statistics() Statistics {
 	return getStatistics(db.mapMeta)
 }
 
+// Return the number of HTML page
+func (db *Database[_]) CountHTML() int {
+	return db.Statistics().Count[TypeFileHTML]
+}
+
 // Add unknwon url.
 //
 // If the URL is known, is deleted of urls, else is saved in DB files.

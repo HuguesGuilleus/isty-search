@@ -10,6 +10,22 @@ import (
 
 func TestGetStatistics(t *testing.T) {
 	assert.Equal(t, Statistics{}, getStatistics(map[keys.Key]metavalue{}))
+
+	m := map[keys.Key]metavalue{
+		keys.NewString("key0"): metavalue{Type: TypeKnow},
+		keys.NewString("key1"): metavalue{Type: TypeRedirect},
+
+		keys.NewString("key2"): metavalue{Type: TypeFileRobots, Length: 2},
+		keys.NewString("key3"): metavalue{Type: TypeFileHTML, Length: 3},
+		keys.NewString("key4"): metavalue{Type: TypeFileRSS, Length: 4},
+		keys.NewString("key5"): metavalue{Type: TypeFileSitemap, Length: 5},
+		keys.NewString("key6"): metavalue{Type: TypeFileFavicon, Length: 6},
+
+		keys.NewString("key7"):  metavalue{Type: TypeErrorNetwork},
+		keys.NewString("key8"):  metavalue{Type: TypeErrorParsing},
+		keys.NewString("key9"):  metavalue{Type: TypeErrorFilterURL},
+		keys.NewString("key10"): metavalue{Type: TypeErrorFilterPage},
+	}
 	assert.Equal(t, Statistics{
 		Count: [256]int{
 			TypeKnow:     1,
@@ -39,21 +55,8 @@ func TestGetStatistics(t *testing.T) {
 		},
 
 		TotalFileSize: 20,
-	}, getStatistics(map[keys.Key]metavalue{
-		keys.NewString("key0"): metavalue{Type: TypeKnow},
-		keys.NewString("key1"): metavalue{Type: TypeRedirect},
-
-		keys.NewString("key2"): metavalue{Type: TypeFileRobots, Length: 2},
-		keys.NewString("key3"): metavalue{Type: TypeFileHTML, Length: 3},
-		keys.NewString("key4"): metavalue{Type: TypeFileRSS, Length: 4},
-		keys.NewString("key5"): metavalue{Type: TypeFileSitemap, Length: 5},
-		keys.NewString("key6"): metavalue{Type: TypeFileFavicon, Length: 6},
-
-		keys.NewString("key7"):  metavalue{Type: TypeErrorNetwork},
-		keys.NewString("key8"):  metavalue{Type: TypeErrorParsing},
-		keys.NewString("key9"):  metavalue{Type: TypeErrorFilterURL},
-		keys.NewString("key10"): metavalue{Type: TypeErrorFilterPage},
-	}))
+	}, getStatistics(m))
+	assert.Equal(t, 1, (&Database[any]{mapMeta: m}).CountHTML())
 }
 
 func TestStatisticsLog(t *testing.T) {
