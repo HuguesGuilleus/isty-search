@@ -7,13 +7,6 @@ import (
 	"testing"
 )
 
-func TestCounterPage(t *testing.T) {
-	count := CounterPage(0)
-	count.Process(nil)
-	count.Process(nil)
-	assert.EqualValues(t, 2, count)
-}
-
 func TestCounterVocab(t *testing.T) {
 	root, err := htmlnode.Parse([]byte("<p> a \t   bb  0 Hello WORD!\nHELLO yolo fffffffffffff</p>"))
 	assert.NoError(t, err)

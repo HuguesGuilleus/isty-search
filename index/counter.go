@@ -4,15 +4,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"sort"
-	// "strings"
 )
-
-// Simple crawler.Processor that count the number of page processed.
-type CounterPage int
-
-func (counter *CounterPage) Process(_ *crawler.Page) {
-	(*counter)++
-}
 
 // Simple crawler.Processor that count the vocabulary occure.
 type CounterVocab map[string]int
