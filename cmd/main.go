@@ -156,12 +156,12 @@ func mainDemoPageRank(logger *slog.Logger, dbbase string) error {
 	countHTML := db.Statistics().Count[crawldatabase.TypeFileHTML]
 	logger.Info("demo.db.page", "count", countHTML)
 
-	pageRank := index.NewPageRank()
-	if err := crawler.Process(db, &pageRank); err != nil {
+	links := index.NewLinks(db.Redirections())
+	if err := crawler.Process(db, &links); err != nil {
 		return err
 	}
 
-	repeatition, scores := pageRank.Score(1000, 0.00_01)
+	repeatition, scores := links.PageRank(1000, 0.00_01)
 	logger.Info("demo.pagerank.repeatition", "nb", repeatition)
 
 	if len(scores) > 30 {
@@ -188,13 +188,13 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 	defer db.Close()
 
 	wordsIndex := make(index.VocabAdvanced)
-	pageRank := index.NewPageRank()
-	if err := crawler.Process(db, &pageRank, &wordsIndex); err != nil {
+	links := index.NewLinks(db.Redirections())
+	if err := crawler.Process(db, &links, &wordsIndex); err != nil {
 		return err
 	}
 
 	logger.Info("order.pagerank")
-	_, scores := pageRank.Score(200, 0.00_001)
+	_, scores := links.PageRank(200, 0.00_001)
 	globalOrder := make(map[keys.Key]float32, len(scores))
 	for _, score := range scores {
 		globalOrder[score.Key] = score.Rank

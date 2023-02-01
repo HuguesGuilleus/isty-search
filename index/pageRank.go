@@ -4,54 +4,65 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/keys"
 	"golang.org/x/exp/slog"
+	"net/url"
 	"sort"
 )
 
-type PageRank struct {
-	links map[keys.Key][]keys.Key
+type Links struct {
+	// All global link (page1 from domain-a.net --> page2 from domain-b.net)
+	globalLinks map[keys.Key][]keys.Key
+	// The redirection map
+	redirection map[keys.Key]keys.Key
 }
 
-func NewPageRank() PageRank {
-	return PageRank{
-		links: make(map[keys.Key][]keys.Key),
+func NewLinks(redirection map[keys.Key]keys.Key) Links {
+	return Links{
+		redirection: redirection,
+		globalLinks: make(map[keys.Key][]keys.Key),
 	}
 }
 
-func (pr *PageRank) Process(page *crawler.Page) {
-	urls := page.GetURLs()
-	links := make([]keys.Key, len(urls))
+func (links *Links) Process(page *crawler.Page) {
+	links.addURLs(&page.URL, page.GetURLs())
+}
+func (links *Links) addURLs(base *url.URL, m map[keys.Key]*url.URL) {
+	s := make([]keys.Key, len(m))
 	i := 0
-	for key := range urls {
-		links[i] = key
+	for key := range m {
+		if target, ok := links.redirection[key]; ok {
+			key = target
+		}
+		s[i] = key
 		i++
 	}
-	pr.links[keys.NewURL(&page.URL)] = links
+	sort.Slice(s, func(i, j int) bool { return s[i].Less(&s[j]) })
+	links.globalLinks[keys.NewURL(base)] = s
 }
 
-func (pr *PageRank) DevStats(logger *slog.Logger) {
+func (pr *Links) DevStats(logger *slog.Logger) {
 	max := 0
-	for _, links := range pr.links {
+	for _, links := range pr.globalLinks {
 		if len(links) > max {
 			max = len(links)
 		}
 	}
 
 	distribution := make([]int, max+1, max+1)
-	for _, link := range pr.links {
+	for _, link := range pr.globalLinks {
 		distribution[len(link)]++
 	}
 
-	logger.Info("pr.stats", "page", len(pr.links), "max", max)
+	logger.Info("pr.stats", "page", len(pr.globalLinks), "max", max)
 	for i, count := range distribution {
 		logger.Info("pr.distribution", "i", i, "count", count)
 	}
 }
 
-func (pr *PageRank) Score(repeat int, epsilon float32) (int, []Score) {
-	return score(pr.links, repeat, epsilon)
+func (links *Links) PageRank(repeat int, epsilon float32) (int, []Score) {
+	return pageRank(links.globalLinks, repeat, epsilon)
 }
 
-func score(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (int, []Score) {
+func pageRank(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (int, []Score) {
 	pageRankFilter(allLinks)
 
 	key2index := make(map[keys.Key]int, len(allLinks))
@@ -90,21 +101,16 @@ func score(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (int, 
 	return repeatition, scores
 }
 
-// Filter unknown key, double key, and key pointed to the page key.
+// Filter unknown key and key pointed to the page key.
 func pageRankFilter(allLinks map[keys.Key][]keys.Key) {
 	for key, links := range allLinks {
-		sort.Slice(links, func(i, j int) bool {
-			return links[i].Less(&links[j])
-		})
 		writeIndex := 0
-		previous := keys.Key{}
 		for _, linkKey := range links {
-			if key == linkKey || previous == linkKey {
+			if key == linkKey {
 				continue
 			} else if _, exist := allLinks[linkKey]; !exist {
 				continue
 			}
-			previous = linkKey
 			links[writeIndex] = linkKey
 			writeIndex++
 		}

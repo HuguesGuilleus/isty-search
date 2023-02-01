@@ -2,8 +2,10 @@ package index
 
 import (
 	"fmt"
+	"github.com/HuguesGuilleus/isty-search/common"
 	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/stretchr/testify/assert"
+	"net/url"
 	"reflect"
 	"testing"
 )
@@ -15,6 +17,7 @@ var (
 	pageD = keys.NewString("page:d")
 	pageX = keys.NewString("page:x")
 	pageY = keys.NewString("page:y")
+	pageR = keys.NewString("page:r")
 )
 
 func keyStringer(key keys.Key) string {
@@ -31,15 +34,31 @@ func keyStringer(key keys.Key) string {
 		return "<pageX>"
 	case pageY:
 		return "<pageY>"
+	case pageR:
+		return "<pageR>"
 	default:
 		return fmt.Sprintf("<Unknown key:%x>", key[:])
 	}
 }
 
+func TestLinksAddURLs(t *testing.T) {
+	links := NewLinks(map[keys.Key]keys.Key{pageR: pageC})
+	links.addURLs(common.ParseURL("page:a"), map[keys.Key]*url.URL{
+		pageB: nil,
+		pageR: nil,
+	})
+	assert.Equal(t, Links{
+		redirection: map[keys.Key]keys.Key{pageR: pageC},
+		globalLinks: map[keys.Key][]keys.Key{
+			pageA: {pageB, pageC},
+		},
+	}, links)
+}
+
 func TestPageRank(t *testing.T) {
-	repeat, scores := score(map[keys.Key][]keys.Key{
+	repeat, scores := pageRank(map[keys.Key][]keys.Key{
 		pageA: {pageC},
-		pageB: {pageA, pageX, pageA},
+		pageB: {pageA, pageX},
 		pageC: {pageA, pageY},
 		pageD: {pageB, pageC, pageD, pageY},
 	}, 1, 0.0)
@@ -69,7 +88,7 @@ func TestPageRank(t *testing.T) {
 func TestPageRankFilter(t *testing.T) {
 	allLinks := map[keys.Key][]keys.Key{
 		pageA: {pageC},
-		pageB: {pageA, pageX, pageA},
+		pageB: {pageA, pageX},
 		pageC: {pageA, pageY},
 		pageD: {pageB, pageD, pageY},
 	}
