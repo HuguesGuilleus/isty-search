@@ -6,6 +6,9 @@ import (
 	"golang.org/x/exp/slog"
 	"net/url"
 	"sort"
+
+	"fmt"
+	"io"
 )
 
 type Links struct {
@@ -60,6 +63,44 @@ func (pr *Links) DevStats(logger *slog.Logger) {
 
 func (links *Links) PageRank(repeat int, epsilon float32) (int, []Score) {
 	return pageRank(links.globalLinks, repeat, epsilon)
+}
+
+func (links *Links) GetLinksList(w io.Writer) {
+	allLinks := links.globalLinks
+
+	pageRankFilter(allLinks)
+
+	key2index := make(map[keys.Key]int, len(allLinks))
+	index2key := make([]keys.Key, len(allLinks))
+	i := 0
+	totalLinks := 0
+	for key, links := range allLinks {
+		index2key[i] = key
+		key2index[key] = i
+		i++
+		totalLinks += len(links)
+	}
+
+	pagesLinks := make([]int, totalLinks)
+	i = 0
+	pages := make([][]int, len(allLinks))
+	for key, links := range allLinks {
+		begin := i
+		for _, link := range links {
+			pagesLinks[i] = key2index[link]
+			i++
+		}
+		pages[key2index[key]] = pagesLinks[begin:i]
+	}
+
+	fmt.Fprintf(w, "%d %d\n", len(allLinks), totalLinks)
+	for _, targets := range pages {
+		fmt.Fprintf(w, "%d ", len(targets))
+		for _, target := range targets {
+			fmt.Fprintf(w, "%d ", target)
+		}
+		fmt.Fprintln(w)
+	}
 }
 
 func pageRank(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (int, []Score) {

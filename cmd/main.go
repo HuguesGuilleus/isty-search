@@ -157,6 +157,14 @@ func mainDemoPageRank(logger *slog.Logger, dbbase string) error {
 		return err
 	}
 
+	f, err := os.Create(filepath.Join(dbbase, "links.txt"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	links.GetLinksList(f)
+
 	repeatition, scores := links.PageRank(1000, 0.00_01)
 	logger.Info("demo.pagerank.repeatition", "nb", repeatition)
 
