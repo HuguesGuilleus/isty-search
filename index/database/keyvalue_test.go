@@ -10,15 +10,15 @@ import (
 func TestKeyValue(t *testing.T) {
 	defer os.Remove("_kv.bin")
 
-	m := map[keys.Key]Bytes{
-		keys.NewString("a"): {1, 2, 3},
-		keys.NewString("b"): {4, 5, 6},
-		keys.NewString("c"): {7, 8, 9},
+	m := map[keys.Key][]byte{
+		keys.Key{0xA}: {1, 2, 3},
+		keys.Key{0xB}: {4, 5, 6},
+		keys.Key{0xD}: {7, 8, 9},
 	}
 
-	assert.NoError(t, Store("_kv.bin", m))
+	assert.NoError(t, Store("_kv.bin", m, func(data []byte) []byte { return data }))
 
-	newMap, err := Load[Bytes]("_kv.bin", UnmarshalBytes)
+	newMap, err := Load("_kv.bin", func(data []byte) ([]byte, error) { return data, nil })
 	assert.NoError(t, err)
-	assert.Equal(t, m, newMap)
+	assert.EqualValues(t, m, newMap)
 }

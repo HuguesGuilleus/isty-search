@@ -2,20 +2,16 @@ package indexdatabase
 
 import (
 	"bytes"
-	"encoding"
 	"fmt"
 	"github.com/HuguesGuilleus/isty-search/keys"
 	"os"
 )
 
-func Store[T encoding.BinaryMarshaler](file string, m map[keys.Key]T) error {
+func Store[T any](file string, m map[keys.Key]T, marshaler func(T) []byte) error {
 	buff := bytes.Buffer{}
 
 	for key, value := range m {
-		data, err := value.MarshalBinary()
-		if err != nil {
-			return fmt.Errorf("MarshalBinary for key %s: %w", key, err)
-		}
+		data := marshaler(value)
 		buff.Write(key[:])
 		buff.WriteByte(byte(len(data) >> 24))
 		buff.WriteByte(byte(len(data) >> 16))
