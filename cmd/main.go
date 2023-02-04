@@ -185,6 +185,9 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 	logger.Info("order.pagerank")
 	repeatition, globalOrder := links.PageRank(200, 0.00_001)
 	logger.Info("order.pagerank.repeatition", "nb", repeatition)
+	if err := index.StorePageRank(filepath.Join(dbbase, "pagerank.db"), globalOrder); err != nil {
+		return err
+	}
 
 	logger.Info("order.sort")
 	for _, pages := range wordsIndex {

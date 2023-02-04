@@ -6,6 +6,7 @@ import (
 	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/stretchr/testify/assert"
 	"net/url"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -141,4 +142,20 @@ func TestPageRankMultiplication(t *testing.T) {
 		assert.Equal(t, []float32{2.0, 0, 2.0, 0}, rank)
 		assert.Equal(t, 3, repeat)
 	}
+}
+
+func TestRWPageRank(t *testing.T) {
+	defer os.Remove("_pagerank.db")
+
+	assert.NoError(t, StorePageRank("_pagerank.db", map[keys.Key]float32{
+		pageA: 0.1,
+		pageB: 1596.163541,
+	}))
+
+	scores, err := LoadPageRank("_pagerank.db")
+	assert.NoError(t, err)
+	assert.Equal(t, map[keys.Key]float32{
+		pageA: 0.1,
+		pageB: 1596.163541,
+	}, scores)
 }

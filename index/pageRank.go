@@ -1,10 +1,13 @@
 package index
 
 import (
+	"fmt"
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/database"
+	"github.com/HuguesGuilleus/isty-search/index/database"
 	"github.com/HuguesGuilleus/isty-search/keys"
 	"golang.org/x/exp/slog"
+	"math"
 	"net/url"
 	"sort"
 )
@@ -178,4 +181,29 @@ func SortPageRank(db *crawldatabase.Database[crawler.Page], scores map[keys.Key]
 	}
 
 	return ranks, nil
+}
+
+func StorePageRank(file string, scores map[keys.Key]float32) error {
+	return indexdatabase.Store(file, scores, func(f float32) []byte {
+		u := math.Float32bits(f)
+		return []byte{
+			byte(u >> 24),
+			byte(u >> 16),
+			byte(u >> 8),
+			byte(u >> 0),
+		}
+	})
+}
+
+func LoadPageRank(file string) (map[keys.Key]float32, error) {
+	return indexdatabase.Load(file, func(data []byte) (float32, error) {
+		if l := len(data); l != 4 {
+			fmt.Println("")
+			return 0, fmt.Errorf("Need 4 byte for a float32, get %d byte.", l)
+		}
+		return math.Float32frombits(uint32(data[0])<<24 |
+			uint32(data[1])<<16 |
+			uint32(data[2])<<8 |
+			uint32(data[3])<<0), nil
+	})
 }
