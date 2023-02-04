@@ -11,7 +11,7 @@ type CounterVocab map[string]int
 
 func (counter CounterVocab) Process(page *crawler.Page) {
 	page.Html.Body.Visit(func(node htmlnode.Node) {
-		for _, word := range getVocab(node.Text) {
+		for _, word := range GetVocab(node.Text) {
 			counter[word]++
 		}
 	})

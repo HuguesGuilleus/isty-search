@@ -6,7 +6,7 @@ import (
 	"unicode/utf8"
 )
 
-func getVocab(s string) (words []string) {
+func GetVocab(s string) (words []string) {
 	words = make([]string, 0)
 	for _, word := range strings.FieldsFunc(s, splitWords) {
 		if len(word) < 3 || sameRunes(word) {

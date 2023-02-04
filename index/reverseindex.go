@@ -21,7 +21,7 @@ func (index ReverseIndex) Process(page *crawler.Page) {
 	counter := make(map[string]float32)
 
 	page.Html.Body.Visit(func(node htmlnode.Node) {
-		for _, word := range getVocab(node.Text) {
+		for _, word := range GetVocab(node.Text) {
 			counter[word]++
 		}
 	})
