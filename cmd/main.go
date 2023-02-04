@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -207,6 +208,17 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 	wordsIndex, err := index.LoadReverseIndex(filepath.Join(dbbase, "words.db"))
 	if err != nil {
 		return fmt.Errorf("Load words index (in 'words.db'): %w", err)
+	}
+
+	pageRank, err := index.LoadPageRank(filepath.Join(dbbase, "pagerank.db"))
+	if err != nil {
+		return err
+	}
+
+	for _, slice := range wordsIndex {
+		sort.Slice(slice, func(i, j int) bool {
+			return pageRank[slice[i].Key] > pageRank[slice[j].Key]
+		})
 	}
 
 	logger.Info("listen", "address", ":8000")
