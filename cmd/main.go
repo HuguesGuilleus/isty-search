@@ -17,7 +17,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -176,28 +175,24 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 	}
 	defer db.Close()
 
-	wordsIndex := make(index.VocabAdvanced)
+	reverseIndex := make(index.ReverseIndex)
 	links := index.NewLinks(db.Redirections())
-	if err := crawler.Process(db, &links, &wordsIndex); err != nil {
+	if err := crawler.Process(db, &links, reverseIndex); err != nil {
 		return err
 	}
 
-	logger.Info("order.pagerank")
+	// Page rank
 	repeatition, globalOrder := links.PageRank(200, 0.00_001)
-	logger.Info("order.pagerank.repeatition", "nb", repeatition)
+	logger.Info("index.pagerank.repeatition", "nb", repeatition)
 	if err := index.StorePageRank(filepath.Join(dbbase, "pagerank.db"), globalOrder); err != nil {
 		return err
 	}
 
-	logger.Info("order.sort")
-	for _, pages := range wordsIndex {
-		sort.Slice(pages, func(i, j int) bool {
-			return globalOrder[pages[i].Page] < globalOrder[pages[j].Page]
-		})
+	// Reverse index
+	reverseIndex.Sort()
+	if err := reverseIndex.Store(filepath.Join(dbbase, "words.db")); err != nil {
+		return err
 	}
-
-	logger.Info("order.save")
-	// indexdatabase.Store("words.db", wordsIndex)
 
 	return nil
 }
@@ -209,7 +204,7 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 	}
 	defer db.Close()
 
-	wordsIndex, err := index.LoadVocabAdvanced(filepath.Join(dbbase, "words.db"))
+	wordsIndex, err := index.LoadReverseIndex(filepath.Join(dbbase, "words.db"))
 	if err != nil {
 		return fmt.Errorf("Load words index (in 'words.db'): %w", err)
 	}

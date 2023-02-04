@@ -24,7 +24,7 @@ type PageResult struct {
 
 type RealQuerier struct {
 	DB    *crawldatabase.Database[crawler.Page]
-	Words VocabAdvanced
+	Words ReverseIndex
 }
 
 func (rq *RealQuerier) QueryText(query string) ([]string, []*PageResult) {
@@ -40,7 +40,7 @@ func (rq *RealQuerier) Query(query string) []keys.Key {
 	pages := rq.Words[keys.NewString(query)]
 	list := make([]keys.Key, len(pages))
 	for i, item := range pages {
-		list[i] = item.Page
+		list[i] = item.Key
 	}
 	return list
 }
