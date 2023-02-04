@@ -64,19 +64,19 @@ func TestPageRank(t *testing.T) {
 	}, 1, 0.0)
 	assert.Equal(t, 1, repeat)
 
-	expected := []Score{
-		Score{Key: pageA, Rank: 2.0},
-		Score{Key: pageC, Rank: 1.5},
-		Score{Key: pageB, Rank: 0.5},
-		Score{Key: pageD, Rank: 0.0},
+	expected := map[keys.Key]float32{
+		pageA: 2.0,
+		pageC: 1.5,
+		pageB: 0.5,
+		pageD: 0.0,
 	}
 
 	if !reflect.DeepEqual(expected, scores) {
 		t.Fail()
-		printScores := func(name string, scores []Score) {
+		printScores := func(name string, scores map[keys.Key]float32) {
 			t.Log(name)
-			for _, score := range scores {
-				t.Log(keyStringer(score.Key), score.Rank)
+			for key, rank := range scores {
+				t.Log(keyStringer(key), rank)
 			}
 			t.Log()
 		}

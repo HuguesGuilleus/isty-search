@@ -10,8 +10,6 @@ import (
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/HuguesGuilleus/isty-search/display"
 	"github.com/HuguesGuilleus/isty-search/index"
-	"github.com/HuguesGuilleus/isty-search/index/database"
-	"github.com/HuguesGuilleus/isty-search/keys"
 	"github.com/HuguesGuilleus/isty-search/sloghandlers"
 	"golang.org/x/exp/slog"
 	"net/http"
@@ -160,18 +158,13 @@ func mainDemoPageRank(logger *slog.Logger, dbbase string) error {
 	repeatition, scores := links.PageRank(1000, 0.00_01)
 	logger.Info("demo.pagerank.repeatition", "nb", repeatition)
 
-	if len(scores) > 30 {
-		scores = scores[:30]
+	ranks, err := index.SortPageRank(db, scores, 30)
+	if err != nil {
+		return err
 	}
-	for _, score := range scores {
-		page, _, err := db.GetValue(score.Key)
-		if err != nil {
-			return err
-		}
-		logger.Info("demo.pagerank.x", "rank", score.Rank, "url", page.URL.String())
+	for _, rank := range ranks {
+		logger.Info("demo.pagerank.x", "rank", rank.Rank, "url", rank.URL)
 	}
-
-	// pageRank.DevStats(logger)
 
 	return nil
 }
@@ -190,11 +183,8 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 	}
 
 	logger.Info("order.pagerank")
-	_, scores := links.PageRank(200, 0.00_001)
-	globalOrder := make(map[keys.Key]float32, len(scores))
-	for _, score := range scores {
-		globalOrder[score.Key] = score.Rank
-	}
+	repeatition, globalOrder := links.PageRank(200, 0.00_001)
+	logger.Info("order.pagerank.repeatition", "nb", repeatition)
 
 	logger.Info("order.sort")
 	for _, pages := range wordsIndex {
@@ -204,7 +194,7 @@ func mainIndex(logger *slog.Logger, dbbase string) error {
 	}
 
 	logger.Info("order.save")
-	indexdatabase.Store("words.db", wordsIndex)
+	// indexdatabase.Store("words.db", wordsIndex)
 
 	return nil
 }

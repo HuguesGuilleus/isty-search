@@ -2,6 +2,7 @@ package index
 
 import (
 	"github.com/HuguesGuilleus/isty-search/crawler"
+	"github.com/HuguesGuilleus/isty-search/crawler/database"
 	"github.com/HuguesGuilleus/isty-search/keys"
 	"golang.org/x/exp/slog"
 	"net/url"
@@ -58,11 +59,11 @@ func (pr *Links) DevStats(logger *slog.Logger) {
 	}
 }
 
-func (links *Links) PageRank(repeat int, epsilon float32) (int, []Score) {
+func (links *Links) PageRank(repeat int, epsilon float32) (int, map[keys.Key]float32) {
 	return pageRank(links.globalLinks, repeat, epsilon)
 }
 
-func pageRank(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (int, []Score) {
+func pageRank(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (int, map[keys.Key]float32) {
 	pageRankFilter(allLinks)
 
 	key2index := make(map[keys.Key]int, len(allLinks))
@@ -89,15 +90,12 @@ func pageRank(allLinks map[keys.Key][]keys.Key, repeat int, epsilon float32) (in
 	}
 
 	repeatition, rank := pageRankMultiplication(pages, repeat, epsilon)
-	scores := make([]Score, len(rank))
+
+	scores := make(map[keys.Key]float32, len(allLinks))
 	for i, rank := range rank {
-		scores[i] = Score{
-			Key:  index2key[i],
-			Rank: rank,
-		}
+		scores[index2key[i]] = rank
 	}
 
-	SortScores(scores)
 	return repeatition, scores
 }
 
@@ -150,4 +148,34 @@ func norm2(v1, v2 []float32) (sum float32) {
 		sum += v * v
 	}
 	return
+}
+
+// On item returned by SortPageRank.
+type SortPageRankItem struct {
+	keys.Key
+	Rank float32
+	URL  string
+}
+
+// Return the limit most ranked page.
+func SortPageRank(db *crawldatabase.Database[crawler.Page], scores map[keys.Key]float32, limit int) ([]SortPageRankItem, error) {
+	ranks := make([]SortPageRankItem, 0, len(scores))
+	for key, rank := range scores {
+		ranks = append(ranks, SortPageRankItem{key, rank, ""})
+	}
+	sort.Slice(ranks, func(i, j int) bool { return ranks[i].Rank > ranks[j].Rank })
+
+	if len(ranks) > limit {
+		ranks = ranks[:limit]
+	}
+
+	for i, r := range ranks {
+		page, _, err := db.GetValue(r.Key)
+		if err != nil {
+			return nil, err
+		}
+		ranks[i].URL = page.URL.String()
+	}
+
+	return ranks, nil
 }
