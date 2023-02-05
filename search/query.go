@@ -14,6 +14,22 @@ type Query struct {
 	Count int
 }
 
+func search(queryString string, reverseIndex map[keys.Key][]index.KeyFloat32) ([]Query, []index.KeyFloat32) {
+	queries := parse(queryString)
+	if len(queries) == 0 {
+		return nil, nil
+	}
+
+	pages := cloneKeyFloat32s(reverseIndex[queries[0].Key])
+	for i, query := range queries {
+		queryPages := reverseIndex[query.Key]
+		queries[i].Count = len(queryPages)
+		pages = commonKeyFloat32s(pages, queryPages)
+	}
+
+	return queries, pages
+}
+
 func parse(q string) []Query {
 	splited := index.GetVocab(q)
 	if len(splited) == 0 {
@@ -27,6 +43,15 @@ func parse(q string) []Query {
 		}
 	}
 	return queries
+}
+
+func cloneKeyFloat32s(src []index.KeyFloat32) []index.KeyFloat32 {
+	if len(src) == 0 {
+		return nil
+	}
+	new := make([]index.KeyFloat32, len(src))
+	copy(new, src)
+	return new
 }
 
 // Merge common element of the two slice into a.

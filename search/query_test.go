@@ -7,6 +7,39 @@ import (
 	"testing"
 )
 
+func TestSearch(t *testing.T) {
+	queries, pages := search("hello WORD", map[keys.Key][]index.KeyFloat32{
+		keys.NewString("hello"): []index.KeyFloat32{
+			index.KeyFloat32{keys.Key{1}, 0},
+			index.KeyFloat32{keys.Key{3}, 0},
+			index.KeyFloat32{keys.Key{4}, 0},
+			index.KeyFloat32{keys.Key{5}, 0},
+		},
+		keys.NewString("word"): []index.KeyFloat32{
+			index.KeyFloat32{keys.Key{1}, 0},
+			index.KeyFloat32{keys.Key{2}, 0},
+			index.KeyFloat32{keys.Key{3}, 0},
+			index.KeyFloat32{keys.Key{5}, 0},
+		},
+	})
+	assert.Equal(t, []Query{
+		Query{"hello", keys.NewString("hello"), 4},
+		Query{"word", keys.NewString("word"), 4},
+	}, queries)
+	assert.Equal(t, []index.KeyFloat32{
+		index.KeyFloat32{keys.Key{1}, 0},
+		index.KeyFloat32{keys.Key{3}, 0},
+		index.KeyFloat32{keys.Key{5}, 0},
+	}, pages)
+
+	_, pages = search("hello WORD", map[keys.Key][]index.KeyFloat32{})
+	assert.Nil(t, pages)
+
+	queries, pages = search("", map[keys.Key][]index.KeyFloat32{})
+	assert.Nil(t, queries)
+	assert.Nil(t, pages)
+}
+
 func TestParse(t *testing.T) {
 	assert.Equal(t, []Query{
 		Query{"hello", keys.NewString("hello"), 0},
