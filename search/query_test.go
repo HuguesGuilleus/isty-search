@@ -68,3 +68,21 @@ func TestMergeKeyFloat32(t *testing.T) {
 		index.KeyFloat32{keys.Key{6}, 1.6},
 	}))
 }
+
+func TestScore(t *testing.T) {
+	pages := []index.KeyFloat32{
+		index.KeyFloat32{keys.Key{0}, 1.0},
+		index.KeyFloat32{keys.Key{1}, 1.0},
+		index.KeyFloat32{keys.Key{2}, 1.0},
+	}
+	score(pages, map[keys.Key]float32{
+		keys.Key{0}: 0.0,
+		keys.Key{1}: 0.1,
+		keys.Key{2}: 0.2,
+	})
+	assert.Equal(t, []index.KeyFloat32{
+		index.KeyFloat32{keys.Key{2}, 1.2},
+		index.KeyFloat32{keys.Key{1}, 1.1},
+		index.KeyFloat32{keys.Key{0}, 1.0},
+	}, pages)
+}

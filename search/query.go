@@ -3,6 +3,7 @@ package search
 import (
 	"github.com/HuguesGuilleus/isty-search/index"
 	"github.com/HuguesGuilleus/isty-search/keys"
+	"sort"
 )
 
 type Query struct {
@@ -74,4 +75,15 @@ func commonKeyFloat32s(a, b []index.KeyFloat32) []index.KeyFloat32 {
 		}
 	}
 	return a[:writeIndex]
+}
+
+// Add a global score to the pages F32, and sort in reverse order by F32 the pages.
+func score(pages []index.KeyFloat32, globalScore map[keys.Key]float32) {
+	for i, p := range pages {
+		pages[i].F32 += globalScore[p.Key]
+	}
+
+	sort.Slice(pages, func(i, j int) bool {
+		return pages[i].F32 > pages[j].F32
+	})
 }
