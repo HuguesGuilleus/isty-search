@@ -13,7 +13,7 @@ import (
 type ReverseIndex map[keys.Key][]KeyFloat32
 
 type KeyFloat32 struct {
-	keys.Key
+	Key keys.Key
 	F32 float32
 }
 
