@@ -4,22 +4,23 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/HuguesGuilleus/isty-search/common"
-	"github.com/HuguesGuilleus/isty-search/crawler"
-	"github.com/HuguesGuilleus/isty-search/crawler/database"
-	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
-	"github.com/HuguesGuilleus/isty-search/display"
-	"github.com/HuguesGuilleus/isty-search/index"
-	"github.com/HuguesGuilleus/isty-search/sloghandlers"
-	"golang.org/x/exp/slog"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
+
+	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/crawler"
+	crawldatabase "github.com/HuguesGuilleus/isty-search/crawler/database"
+	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
+	"github.com/HuguesGuilleus/isty-search/display"
+	"github.com/HuguesGuilleus/isty-search/index"
+	"github.com/HuguesGuilleus/isty-search/search"
+	"github.com/HuguesGuilleus/isty-search/sloghandlers"
+	"golang.org/x/exp/slog"
 )
 
 var actions = map[string]func(logger *slog.Logger, dbbase string) error{
@@ -215,20 +216,15 @@ func mainSearch(logger *slog.Logger, dbbase string) error {
 		return err
 	}
 
-	for _, slice := range wordsIndex {
-		sort.Slice(slice, func(i, j int) bool {
-			return pageRank[slice[i].Key] > pageRank[slice[j].Key]
-		})
-	}
-
 	logger.Info("listen", "address", ":8000")
-	return http.ListenAndServe(":8000", display.Handler(logger, &index.RealQuerier{
-		DB:    db,
-		Words: wordsIndex,
+	return http.ListenAndServe(":8000", display.Handler(logger, &search.DB{
+		CrawlerDB:    db,
+		ReverseIndex: wordsIndex,
+		GlobalScore:  pageRank,
 	}))
 }
 
 func mainDemoSearch(logger *slog.Logger, _ string) error {
 	logger.Info("listen", "address", ":8000")
-	return http.ListenAndServe(":8000", display.Handler(logger, index.FakeQuerier()))
+	return http.ListenAndServe(":8000", display.Handler(logger, search.FakeDB()))
 }

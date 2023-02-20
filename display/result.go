@@ -1,27 +1,27 @@
 package display
 
 import (
-	"github.com/HuguesGuilleus/isty-search/common"
-	"github.com/HuguesGuilleus/isty-search/index"
 	"net/http"
 	"strconv"
+
+	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/search"
 )
 
-func sendResult(w http.ResponseWriter, r *http.Request, query string, p int, querier index.Querier) {
-	_, result := querier.QueryText(query)
-	resultLen := len(result)
-	if len(result) > 10 {
-		result = result[:10]
+func sendResult(w http.ResponseWriter, r *http.Request, db *search.DB, query string, p int) {
+	result, err := db.Search(query, p)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	nodeResults := make([]node, len(result))
-	for i, p := range result {
+	nodeResults := make([]node, len(result.Results))
+	for i, p := range result.Results {
 		u := p.URL.String()
 		nodeResults[i] = np("li.search-results-item",
 			nap("a.search-results-item", []string{`href="` + u + `"`},
 				nt("div.search-results-item-title", limitString(p.Title, 50)),
 				np("div.search-results-item-info",
-					ntime(".search-results-item-info-time", p.LastModification),
 					nt("span.search-results-item-info-url", limitString(u, 70)),
 				),
 				nt("div.search-results-item-desc", limitString(p.Description, 150)),
@@ -58,7 +58,7 @@ func sendResult(w http.ResponseWriter, r *http.Request, query string, p int, que
 				),
 			),
 			np("div.search-query",
-				nt("div.search-query-resultLen", strconv.Itoa(resultLen)),
+				nt("div.search-query-resultLen", strconv.Itoa(result.NumberOfResults)),
 				nt("div.search-query-page", strconv.Itoa(p)),
 			),
 			np("ul.search-results", nodeResults...),

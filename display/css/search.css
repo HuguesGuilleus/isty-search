@@ -7,6 +7,7 @@
 .search-top-home {
 	grid-row: 1/3;
 }
+
 .search-top-home-img {
 	width: 12ex;
 	height: 100%;
@@ -23,6 +24,7 @@
 	padding: 0.2ex 1ex;
 	font-size: x-large;
 }
+
 .search-top-kind-buttonText-img {
 	margin-right: 1ex;
 	width: 0.8em;
@@ -54,10 +56,6 @@ a.search-results-item {
 	font-weight: bold;
 }
 
-.search-results-item-info-time {
-	background: #ddd;
-	margin-right: 1ex;
-}
 .search-results-item-info-url {
 	color: #2A502E;
 }

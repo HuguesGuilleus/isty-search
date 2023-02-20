@@ -1,13 +1,14 @@
 package display
 
 import (
-	"github.com/HuguesGuilleus/isty-search/index"
-	"golang.org/x/exp/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/HuguesGuilleus/isty-search/search"
+	"golang.org/x/exp/slog"
 )
 
-func Handler(logger *slog.Logger, querier index.Querier) http.Handler {
+func Handler(logger *slog.Logger, db *search.DB) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/favicon.ico":
@@ -46,7 +47,7 @@ func Handler(logger *slog.Logger, querier index.Querier) http.Handler {
 			}
 
 			logger.Info("serv.search", "page", page, "query", q)
-			sendResult(w, r, q, page, querier)
+			sendResult(w, r, db, q, page)
 
 		default:
 			logger.Info("serv.404", "url", r.URL.String())
