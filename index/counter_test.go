@@ -1,10 +1,11 @@
 package index
 
 import (
+	"testing"
+
 	"github.com/HuguesGuilleus/isty-search/crawler"
 	"github.com/HuguesGuilleus/isty-search/crawler/htmlnode"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestCounterVocab(t *testing.T) {
@@ -22,8 +23,8 @@ func TestCounterVocab(t *testing.T) {
 	}, counter)
 	assert.Equal(t, 8, counter.Sum())
 	assert.Equal(t, []WordFrequency{
-		WordFrequency{"hello", 4},
-		WordFrequency{"word", 2},
-		WordFrequency{"yolo", 2},
+		{"hello", 4},
+		{"word", 2},
+		{"yolo", 2},
 	}, counter.Frequency())
 }

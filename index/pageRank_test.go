@@ -2,13 +2,14 @@ package index
 
 import (
 	"fmt"
-	"github.com/HuguesGuilleus/isty-search/common"
-	"github.com/HuguesGuilleus/isty-search/keys"
-	"github.com/stretchr/testify/assert"
 	"net/url"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/HuguesGuilleus/isty-search/common"
+	"github.com/HuguesGuilleus/isty-search/keys"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -124,10 +125,10 @@ func TestPageRankFilter(t *testing.T) {
 
 func TestPageRankMultiplication(t *testing.T) {
 	pages := [][]int{
-		0: []int{2},
-		1: []int{0},
-		2: []int{0},
-		3: []int{1, 2},
+		0: {2},
+		1: {0},
+		2: {0},
+		3: {1, 2},
 	}
 	repeat, rank := pageRankMultiplication(pages, 1, 0.0)
 	assert.Equal(t, []float32{2.0, 0.5, 1.5, 0.0}, rank)
