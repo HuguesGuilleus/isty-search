@@ -1,9 +1,10 @@
 package search
 
 import (
+	"sort"
+
 	"github.com/HuguesGuilleus/isty-search/index"
 	"github.com/HuguesGuilleus/isty-search/keys"
-	"sort"
 )
 
 type Query struct {
@@ -55,9 +56,9 @@ func cloneKeyFloat32s(src []index.KeyFloat32) []index.KeyFloat32 {
 	return new
 }
 
-// Merge common element of the two slice into a.
-// Return the a truncated with common element.
-// The tow slice must be sorted by key.
+// Merge common elements of the two slice into a.
+// Return a truncated with common elements.
+// The tow slices must be sorted by key.
 func commonKeyFloat32s(a, b []index.KeyFloat32) []index.KeyFloat32 {
 	writeIndex := 0
 	ai := 0
