@@ -62,7 +62,7 @@ func FakeDB() *DB {
 		globalScore[k] = float32(100 - i)
 
 		crawlerDB.SetValue(k, &crawler.Page{
-			URL:  *common.ParseURL("https://exemple.org/page-" + istr),
+			URL:  *common.ParseURL("https://example.com/page-" + istr),
 			Html: &htmlnode.Root{Meta: htmlnode.Meta{Title: "page:" + istr, Description: "desc:" + istr}},
 		}, crawldatabase.TypeFileHTML)
 	}

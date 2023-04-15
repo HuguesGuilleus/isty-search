@@ -15,7 +15,7 @@ func TestDBSearch(t *testing.T) {
 		istr := strconv.Itoa(i)
 		pageResults = append(pageResults, PageResult{
 			Key:         keys.Key{byte(i)},
-			URL:         *common.ParseURL("https://exemple.org/page-" + istr),
+			URL:         *common.ParseURL("https://example.com/page-" + istr),
 			Title:       "page:" + istr,
 			Description: "desc:" + istr,
 		})
